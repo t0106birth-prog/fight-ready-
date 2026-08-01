@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { getDb, appendRow, uid, nowIso, history } from "@/lib/store";
 import { setSession, clearSession, homePath } from "@/lib/auth";
+import { codeMatches, grantUnlock, hasUnlock } from "@/lib/unlock";
 import type { Role } from "@/lib/types";
 
 async function doLogin(
@@ -61,14 +62,22 @@ const QUICK_LOGIN_EMAILS = new Set([
   "kaito@example.com",
   "misaki@example.com",
 ]);
-function quickLoginEnabled(): boolean {
-  if (process.env.VERCEL || process.env.NODE_ENV === "production") {
-    return process.env.ALLOW_QUICK_LOGIN === "1";
-  }
-  return true;
+/** 開発中は常に許可。本番は「隠し扉で暗証番号(QUICK_CODE)を通過した(fr_quick Cookie)」ときだけ許可。 */
+async function quickLoginEnabled(): Promise<boolean> {
+  if (!process.env.VERCEL && process.env.NODE_ENV !== "production") return true;
+  return hasUnlock("fr_quick");
 }
+
+/** 隠し扉：暗証番号(QUICK_CODE)を入れて、かんたんログインを解錠する。 */
+export async function quickUnlockAction(formData: FormData): Promise<void> {
+  const code = String(formData.get("code") || "");
+  if (!codeMatches(process.env.QUICK_CODE, code)) redirect("/?qe=1");
+  await grantUnlock("fr_quick");
+  redirect("/");
+}
+
 export async function quickLoginAction(formData: FormData): Promise<void> {
-  if (!quickLoginEnabled()) redirect("/");
+  if (!(await quickLoginEnabled())) redirect("/");
   const email = String(formData.get("email") || "").trim().toLowerCase();
   if (!QUICK_LOGIN_EMAILS.has(email)) redirect("/");
   const db = await getDb();

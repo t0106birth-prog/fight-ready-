@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession, homePath } from "@/lib/auth";
+import { hasUnlock } from "@/lib/unlock";
 import { EntrySwitch } from "@/components/EntrySwitch";
+import { BrandHero } from "@/components/BrandHero";
+import { AppUsageDoor } from "@/components/AppUsageDoor";
 import { quickLoginAction } from "./login/actions";
 
-const QUICK_LOGIN = !process.env.VERCEL && process.env.NEXT_PUBLIC_QUICK_LOGIN !== "false";
 const QUICK = [
   { email: "staff@fightbase.jp", label: "ジムスタッフとして入る", desc: "全利用者の状態を確認", ico: "🧑‍🏫" },
   { email: "takeru@example.com", label: "選手として入る（緑）", desc: "山田タケル／計量まで21日", ico: "🥊" },
@@ -12,20 +14,17 @@ const QUICK = [
   { email: "misaki@example.com", label: "一般会員として入る", desc: "田中美咲／ボディメイクキャンプ", ico: "💪" },
 ];
 
-export default async function EntryPage() {
+export default async function EntryPage({ searchParams }: { searchParams: Promise<{ qe?: string }> }) {
   const s = await getSession();
   if (s) redirect(homePath(s.role));
+  const sp = await searchParams;
+  // 開発中は常に表示。本番は隠し扉（アプリのように使う を2回タップ→暗証番号）で解錠したときだけ表示。
+  const quickUnlocked = !process.env.VERCEL || (await hasUnlock("fr_quick"));
+
   return (
     <div className="shell">
-      <div className="brand-hero">
-        <div className="brand-logo">FIGHT <span className="r">READY</span></div>
-        <div className="brand-tag">落とすだけでは、勝てない。</div>
-        <div className="brand-sub" style={{ color: "var(--ink)", fontWeight: 800, fontSize: 17, marginTop: 10 }}>
-          一人で戦わない。<span style={{ color: "var(--red-bright)" }}>チームで、仕上げる。</span>
-        </div>
-        <div className="brand-sub">体重・トレーニング・疲労・回復を、チームでひとつに。</div>
-        <div className="brand-en">MAKE WEIGHT. STAY STRONG. FIGHT READY.</div>
-      </div>
+      {/* ロゴ2回タップで本部管理(HQ)へ */}
+      <BrandHero />
 
       <EntrySwitch
         login={
@@ -54,7 +53,9 @@ export default async function EntryPage() {
         }
       />
 
-      {QUICK_LOGIN && (
+      {sp.qe && <div className="alert-band alert-red" style={{ marginTop: 10 }}>暗証番号が違います。</div>}
+
+      {quickUnlocked && (
         <div className="quick-panel">
           <div className="row" style={{ marginBottom: 8 }}>
             <b style={{ fontSize: 14 }}>かんたんログイン（お試し用）</b>
@@ -73,12 +74,8 @@ export default async function EntryPage() {
         </div>
       )}
 
-      <p className="kicker">アプリのように使う</p>
-      <div className="card">
-        <p className="small mt0">ホーム画面に追加すると、次からアプリのように全画面で開けます。</p>
-        <p className="small" style={{ marginBottom: 4 }}><b>iPhone</b>（Safari）: 共有ボタン → 「ホーム画面に追加」</p>
-        <p className="small" style={{ marginBottom: 0 }}><b>Android</b>（Chrome）: ⋮メニュー → 「インストール」</p>
-      </div>
+      {/* 隠し扉②：ここを2回タップ → 暗証番号 → かんたんログイン解錠 */}
+      <AppUsageDoor />
 
       <p className="info-note center" style={{ marginTop: 20 }}>
         <Link href="/lp">サービス紹介ページ</Link>

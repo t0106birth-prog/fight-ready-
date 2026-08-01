@@ -36,9 +36,10 @@
     ".next-verify2/types/**/*.ts",
     ".next-verify3/types/**/*.ts",
     ".next-verify4/types/**/*.ts",
+    ".next-verify5/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts",
-    ".next-verify5/types/**/*.ts"
+    ".next-verify6/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"
