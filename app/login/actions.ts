@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { getDb, appendRow, uid, nowIso, history } from "@/lib/store";
 import { setSession, clearSession, homePath } from "@/lib/auth";
-import { codeMatches, grantUnlock, hasUnlock } from "@/lib/unlock";
 import type { Role } from "@/lib/types";
 
 async function doLogin(
@@ -51,10 +50,8 @@ export async function logoutAction(): Promise<void> {
 }
 
 /**
- * かんたんログイン（お試し用）。**パスワード不要**なので厳重にゲートする:
- * 1) 本番/Vercel では ALLOW_QUICK_LOGIN=1 のときだけ（開発は既定で許可）
- * 2) 固定の許可アカウントのみ（任意のメールでの無認証ログインを塞ぐ）
- * UI を隠しても Server Action へ直接POSTできるため、サーバー側でも必ず検証する。
+ * かんたんログイン（お試し用）。隠し扉（「アプリのように使う」を2回タップ）で表示され、
+ * 暗証番号なしでそのままデモ用アカウントに入れる。無認証ログインを架空の固定アカウントに限定するため許可リストで縛る。
  */
 const QUICK_LOGIN_EMAILS = new Set([
   "staff@fightbase.jp",
@@ -62,22 +59,8 @@ const QUICK_LOGIN_EMAILS = new Set([
   "kaito@example.com",
   "misaki@example.com",
 ]);
-/** 開発中は常に許可。本番は「隠し扉で暗証番号(QUICK_CODE)を通過した(fr_quick Cookie)」ときだけ許可。 */
-async function quickLoginEnabled(): Promise<boolean> {
-  if (!process.env.VERCEL && process.env.NODE_ENV !== "production") return true;
-  return hasUnlock("fr_quick");
-}
-
-/** 隠し扉：暗証番号(QUICK_CODE)を入れて、かんたんログインを解錠する。 */
-export async function quickUnlockAction(formData: FormData): Promise<void> {
-  const code = String(formData.get("code") || "");
-  if (!codeMatches(process.env.QUICK_CODE, code)) redirect("/?qe=1");
-  await grantUnlock("fr_quick");
-  redirect("/");
-}
 
 export async function quickLoginAction(formData: FormData): Promise<void> {
-  if (!(await quickLoginEnabled())) redirect("/");
   const email = String(formData.get("email") || "").trim().toLowerCase();
   if (!QUICK_LOGIN_EMAILS.has(email)) redirect("/");
   const db = await getDb();

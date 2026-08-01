@@ -9,7 +9,8 @@ import { codeMatches, grantUnlock, clearUnlock } from "@/lib/unlock";
  */
 export async function hqVerifyAction(formData: FormData): Promise<void> {
   const code = String(formData.get("code") || "");
-  if (!codeMatches(process.env.HQ_CODE, code)) redirect("/hq?e=1");
+  // env HQ_CODE 優先。未設定なら既定番号で解錠（後で env を入れればそちらが勝つ）
+  if (!codeMatches(process.env.HQ_CODE || "0363037239", code)) redirect("/hq?e=1");
   await grantUnlock("fr_hq");
   redirect("/hq");
 }

@@ -1,45 +1,56 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { quickUnlockAction } from "@/app/login/actions";
-import { SubmitButton } from "./SubmitButton";
+import { useState } from "react";
+import { quickLoginAction } from "@/app/login/actions";
+
+type QuickAccount = { email: string; label: string; desc: string; ico: string };
 
 /**
- * 隠し扉②：「アプリのように使う」を2回タップ → 暗証番号(QUICK_CODE)入力 → かんたんログイン解錠。
- * 見た目は普通の説明カード。2回タップで暗証番号の入力欄が出る。
+ * 隠し扉：「アプリのように使う（おすすめ）」の先頭にある小さなアプリ風アイコンを押すと、
+ * 暗証番号なしで「かんたんログイン」ボタンが出る（デモ用の架空アカウント）。
  */
-export function AppUsageDoor() {
-  const [showCode, setShowCode] = useState(false);
-  const taps = useRef(0);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const onTap = () => {
-    taps.current += 1;
-    if (timer.current) clearTimeout(timer.current);
-    if (taps.current >= 2) {
-      taps.current = 0;
-      setShowCode(true);
-      return;
-    }
-    timer.current = setTimeout(() => { taps.current = 0; }, 700);
-  };
+export function AppUsageDoor({ accounts }: { accounts: QuickAccount[] }) {
+  const [open, setOpen] = useState(false);
 
   return (
     <>
-      <p className="kicker" onClick={onTap} style={{ userSelect: "none" }}>アプリのように使う</p>
-      <div className="card" onClick={onTap} style={{ userSelect: "none" }}>
+      <p className="kicker" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span
+          onClick={() => setOpen((v) => !v)}
+          role="button"
+          aria-label="かんたんログイン"
+          title="かんたんログイン"
+          style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: 20, height: 20, borderRadius: 5, background: "#6c5ce7", color: "#fff",
+            fontSize: 12, lineHeight: 1, cursor: "pointer", userSelect: "none", flex: "none",
+          }}
+        >▦</span>
+        アプリのように使う（おすすめ）
+      </p>
+      <div className="card">
         <p className="small mt0">ホーム画面に追加すると、次からアプリのように全画面で開けます。</p>
         <p className="small" style={{ marginBottom: 4 }}><b>iPhone</b>（Safari）: 共有ボタン → 「ホーム画面に追加」</p>
         <p className="small" style={{ marginBottom: 0 }}><b>Android</b>（Chrome）: ⋮メニュー → 「インストール」</p>
       </div>
 
-      {showCode && (
-        <form action={quickUnlockAction} className="card" style={{ marginTop: 8, borderColor: "var(--line)" }}>
-          <label className="fl mt0" htmlFor="qcode">暗証番号</label>
-          <input id="qcode" name="code" type="password" inputMode="numeric" autoComplete="off" autoFocus placeholder="番号を入力" />
-          <div style={{ height: 8 }} />
-          <SubmitButton className="btn btn-dark btn-sm" pendingLabel="確認中…">かんたんログインを表示</SubmitButton>
-        </form>
+      {open && (
+        <div className="quick-panel" style={{ marginTop: 8 }}>
+          <div className="row" style={{ marginBottom: 8 }}>
+            <b style={{ fontSize: 14 }}>かんたんログイン（お試し用）</b>
+            <span className="badge badge-attn">試作版</span>
+          </div>
+          <p className="info-note" style={{ marginTop: 0 }}>パスワードなしでサンプル画面を確認できます（データはすべて架空）。</p>
+          {accounts.map((a) => (
+            <form action={quickLoginAction} key={a.email}>
+              <input type="hidden" name="email" value={a.email} />
+              <button type="submit" className="quick-btn">
+                <span className="q-ico">{a.ico}</span>
+                <span><span className="q-t">{a.label}</span><span className="q-d">{a.desc}</span></span>
+              </button>
+            </form>
+          ))}
+        </div>
       )}
     </>
   );

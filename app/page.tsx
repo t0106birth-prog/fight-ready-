@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession, homePath } from "@/lib/auth";
-import { hasUnlock } from "@/lib/unlock";
 import { EntrySwitch } from "@/components/EntrySwitch";
 import { BrandHero } from "@/components/BrandHero";
 import { AppUsageDoor } from "@/components/AppUsageDoor";
-import { quickLoginAction } from "./login/actions";
 
 const QUICK = [
   { email: "staff@fightbase.jp", label: "ジムスタッフとして入る", desc: "全利用者の状態を確認", ico: "🧑‍🏫" },
@@ -14,12 +12,9 @@ const QUICK = [
   { email: "misaki@example.com", label: "一般会員として入る", desc: "田中美咲／ボディメイクキャンプ", ico: "💪" },
 ];
 
-export default async function EntryPage({ searchParams }: { searchParams: Promise<{ qe?: string }> }) {
+export default async function EntryPage() {
   const s = await getSession();
   if (s) redirect(homePath(s.role));
-  const sp = await searchParams;
-  // 開発中は常に表示。本番は隠し扉（アプリのように使う を2回タップ→暗証番号）で解錠したときだけ表示。
-  const quickUnlocked = !process.env.VERCEL || (await hasUnlock("fr_quick"));
 
   return (
     <div className="shell">
@@ -53,29 +48,8 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
         }
       />
 
-      {sp.qe && <div className="alert-band alert-red" style={{ marginTop: 10 }}>暗証番号が違います。</div>}
-
-      {quickUnlocked && (
-        <div className="quick-panel">
-          <div className="row" style={{ marginBottom: 8 }}>
-            <b style={{ fontSize: 14 }}>かんたんログイン（お試し用）</b>
-            <span className="badge badge-attn">試作版</span>
-          </div>
-          <p className="info-note" style={{ marginTop: 0 }}>パスワードなしでサンプル画面を確認できます（データはすべて架空）。</p>
-          {QUICK.map((a) => (
-            <form action={quickLoginAction} key={a.email}>
-              <input type="hidden" name="email" value={a.email} />
-              <button type="submit" className="quick-btn">
-                <span className="q-ico">{a.ico}</span>
-                <span><span className="q-t">{a.label}</span><span className="q-d">{a.desc}</span></span>
-              </button>
-            </form>
-          ))}
-        </div>
-      )}
-
-      {/* 隠し扉②：ここを2回タップ → 暗証番号 → かんたんログイン解錠 */}
-      <AppUsageDoor />
+      {/* 隠し扉②：見出し先頭の小さなアプリ風アイコンを押すと、かんたんログインが出る */}
+      <AppUsageDoor accounts={QUICK} />
 
       <p className="info-note center" style={{ marginTop: 20 }}>
         <Link href="/lp">サービス紹介ページ</Link>
