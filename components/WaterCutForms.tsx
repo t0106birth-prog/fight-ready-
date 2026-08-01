@@ -4,7 +4,7 @@ import { useState } from "react";
 import { SubmitButton } from "./SubmitButton";
 import { startWaterCutAction, saveWaterCutLogAction, updateWaterCutBaselineAction } from "@/app/u/actions";
 import { OwnerField } from "@/components/OwnerField";
-import { toDateTimeLocal } from "@/lib/calc";
+import { toDateTimeLocal, toDateTimeLocalValue } from "@/lib/calc";
 
 /** 水抜き開始登録(§23) */
 export function StartWaterCutForm({
@@ -63,9 +63,9 @@ export function StartWaterCutForm({
         今回の計量目標が{target || "入力した値"}kgであることを確認しました
       </label>
       <label className="fl" htmlFor="weighIn">計量日時</label>
-      <input id="weighIn" name="weighIn" type="datetime-local" defaultValue={toDateTimeLocal(defaultWeighIn)} required />
+      <input id="weighIn" name="weighIn" type="datetime-local" defaultValue={toDateTimeLocalValue(defaultWeighIn)} required />
       <label className="fl" htmlFor="fight">試合日時</label>
-      <input id="fight" name="fight" type="datetime-local" defaultValue={toDateTimeLocal(defaultFight)} />
+      <input id="fight" name="fight" type="datetime-local" defaultValue={toDateTimeLocalValue(defaultFight)} />
       <div style={{ height: 14 }} />
       <SubmitButton className="btn btn-primary" pendingLabel="開始しています…">水抜きモニタリングを開始</SubmitButton>
     </form>

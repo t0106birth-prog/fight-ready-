@@ -43,6 +43,17 @@ export async function registerAction(formData: FormData): Promise<void> {
     return v || undefined;
   };
 
+  // 体重・身長の範囲チェック（マイページ/水抜きと同じ基準。登録だけ素通りしていた）
+  const heightCm = num("height");
+  const usualWeight = num("usualWeight");
+  const startWeight = num("currentWeight");
+  const targetWeight = num("targetWeight");
+  const okWeight = (v?: number) => v == null || (Number.isFinite(v) && v >= 20 && v <= 300);
+  const okHeight = (v?: number) => v == null || (Number.isFinite(v) && v >= 100 && v <= 250);
+  if (![usualWeight, startWeight, targetWeight].every(okWeight)) fail("体重は20〜300kgの範囲で入力してください");
+  if (!okHeight(heightCm)) fail("身長は100〜250cmの範囲で入力してください");
+  const promotion = (g("promotion") || "none") as User["promotion"];
+
   const user: User = {
     id: uid(),
     gymId,
@@ -53,22 +64,23 @@ export async function registerAction(formData: FormData): Promise<void> {
     status: "active",
     gender: (g("gender") || undefined) as User["gender"],
     birthDate: dt("birthDate"),
-    heightCm: num("height"),
+    heightCm,
     userType,
-    usualWeight: num("usualWeight"),
-    startWeight: num("currentWeight"),
+    usualWeight,
+    startWeight,
     primarySport,
     sports: sports.length ? sports : primarySport ? [primarySport] : [],
     goals,
-    targetWeight: num("targetWeight"),
+    targetWeight,
     targetDate: dt("targetDate"),
     weeklyPlanCount: num("weeklyPlanCount"),
     createdAt: nowIso(),
     ...(userType === "pro"
       ? {
-          promotion: (g("promotion") || "none") as User["promotion"],
+          promotion,
           contractWeightKg: num("contractWeight"),
-          usesHydration: formData.get("usesHydration") === "on",
+          // ONE選択時はUI上「自動でON」表記。非表示チェックボックスは送信されないため、ここで補完する
+          usesHydration: promotion === "one" ? true : formData.get("usesHydration") === "on",
           weighInAt: dt("weighInAt"),
           fightAt: dt("fightAt"),
           weighInType: (g("weighInType") || undefined) as User["weighInType"],

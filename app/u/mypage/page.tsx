@@ -10,7 +10,7 @@ import { OwnerField } from "@/components/OwnerField";
 import { QrJoinForm } from "@/components/QrJoinForm";
 import { sportLabel, goalLabel, SPORTS } from "@/lib/constants";
 import { currentWeight } from "@/lib/derive";
-import { round1, ageFrom, businessDate, daysUntil, toDateTimeLocal } from "@/lib/calc";
+import { round1, ageFrom, businessDate, daysUntil, toDateTimeLocalValue } from "@/lib/calc";
 
 export default async function MyPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string; e?: string }> }) {
   const sp = await searchParams;
@@ -149,9 +149,9 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
               <p className="kicker">🥊 計量・大会</p>
               <div className="card">
                 <label className="fl mt0" htmlFor="weighInAt">計量日時</label>
-                <input id="weighInAt" name="weighInAt" type="datetime-local" defaultValue={toDateTimeLocal(user.weighInAt)} />
+                <input id="weighInAt" name="weighInAt" type="datetime-local" defaultValue={toDateTimeLocalValue(user.weighInAt)} />
                 <label className="fl" htmlFor="fightAt">試合日時（任意）</label>
-                <input id="fightAt" name="fightAt" type="datetime-local" defaultValue={toDateTimeLocal(user.fightAt)} />
+                <input id="fightAt" name="fightAt" type="datetime-local" defaultValue={toDateTimeLocalValue(user.fightAt)} />
                 <label className="fl">計量の種類</label>
                 <div className="seg">
                   <label><input type="radio" name="weighInType" value="day_before" defaultChecked={user.weighInType !== "same_day"} />前日計量</label>

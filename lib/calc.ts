@@ -25,6 +25,15 @@ export function toDateTimeLocal(iso?: string): string {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
+/**
+ * 保存済みの「任意」日時を datetime-local の defaultValue にする。
+ * 未設定なら空欄（引数なしの toDateTimeLocal() は"現在時刻"を返すので、任意項目にそれを使うと
+ * 未入力でも今の日時が勝手に入ってしまう＝試合日時が今日扱いになり記録が試合当日ロックされる）。
+ */
+export function toDateTimeLocalValue(iso?: string): string {
+  return iso ? toDateTimeLocal(iso) : "";
+}
+
 export function fromDateTimeLocal(value: string): string {
   if (!value) return "";
   const d = /Z$|[+-]\d{2}:?\d{2}$/.test(value) ? new Date(value) : new Date(`${value}:00+09:00`);
