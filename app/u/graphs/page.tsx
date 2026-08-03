@@ -52,7 +52,14 @@ export default async function GraphsPage({ searchParams }: { searchParams: Promi
     markers.push({ d: user.targetDate, label: "目標日", color: "#93a1b5" });
   }
   if (wc) markers.push({ d: businessDate(new Date(wc.startDatetime)), label: "水抜き開始", color: "#3d8bf0" });
-  const band = wc ? { from: businessDate(new Date(wc.startDatetime)), to: businessDate(new Date(wc.weighInDatetime)) } : null;
+  const loadingBand = wc ? {
+    from: businessDate(new Date(wc.startDatetime)),
+    to: wc.cutStartedAt ? businessDate(new Date(wc.cutStartedAt)) : todayStr(),
+  } : null;
+  const cutBand = wc?.cutStartedAt ? {
+    from: businessDate(new Date(wc.cutStartedAt)),
+    to: businessDate(new Date(wc.weighInDatetime)),
+  } : null;
 
   const wp = weightProgress(user, db);
   const cw = points.length ? points[points.length - 1].y : (user.startWeight ?? null);
@@ -159,7 +166,8 @@ export default async function GraphsPage({ searchParams }: { searchParams: Promi
                 points={points}
                 plan={goalCoherent ? plan : []}
                 markers={markers}
-                band={band}
+                loadingBand={loadingBand}
+                cutBand={cutBand}
                 startY={isMember && startW != null ? startW : undefined}
                 hLine={goalCoherent && effectiveTarget != null ? { y: effectiveTarget, label: `${isPro ? "計量目標" : "目標"} ${effectiveTarget}kg` } : null}
               />

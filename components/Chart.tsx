@@ -8,15 +8,18 @@ export interface CMarker { d: string; label: string; color?: string }
 
 /**
  * タップで値を確認できる折れ線グラフ（体重用）。外部ライブラリ不使用。
- * plan: 予定体重線（破線）。band: 水抜き期間の背景帯。
+ * plan: 予定体重線（破線）。band: 単一期間の背景帯。
+ * loadingBand / cutBand: 計量準備グラフでローディングと水抜きを分けて表示する背景帯。
  */
 export function LineChart({
-  points, plan, markers, band, hLine, startY, unit = "kg", label = "体重", color = "#ff5348", height = 230,
+  points, plan, markers, band, loadingBand, cutBand, hLine, startY, unit = "kg", label = "体重", color = "#ff5348", height = 230,
 }: {
   points: CPoint[];
   plan?: CPoint[];
   markers?: CMarker[];
   band?: { from: string; to: string } | null;
+  loadingBand?: { from: string; to: string } | null;
+  cutBand?: { from: string; to: string } | null;
   hLine?: { y: number; label: string } | null;
   startY?: number; // 指定するとタップ吹き出しに「スタートから ±◯kg」を出す（一般会員向け）
   unit?: string;
@@ -60,8 +63,10 @@ export function LineChart({
       <div className="chart-legend">
         <span><i style={{ background: color }} /> 実際の{label}</span>
         {plan && plan.length > 0 && <span><i style={{ background: "#93a1b5" }} /> 予定線</span>}
-        {hLine && <span><i style={{ background: "var(--amber)" }} /> 目標{unit}</span>}
+        {hLine && <span style={{ color: "var(--amber-ink)", fontWeight: 800 }}><i style={{ background: "var(--amber)", height: 5 }} /> {hLine.label}</span>}
         {band && <span><i style={{ background: "rgba(61,139,240,.3)" }} /> 水抜き期間</span>}
+        {loadingBand && <span><i style={{ background: "rgba(61,139,240,.55)", height: 8 }} /> ローディング期間</span>}
+        {cutBand && <span><i style={{ background: "rgba(226,59,50,.55)", height: 8 }} /> 水抜き期間</span>}
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet"
         style={{ display: "block", width: "100%", height: "auto", aspectRatio: `${W} / ${H}`, touchAction: "pan-y" }}
@@ -70,6 +75,12 @@ export function LineChart({
         onPointerMove={(e) => { if (e.buttons === 1 || e.pointerType === "touch") pickAt(e.clientX, e.currentTarget); }}>
         {band && (
           <rect x={X(band.from)} y={PAD.t} width={Math.max(2, X(band.to) - X(band.from))} height={H - PAD.t - PAD.b} fill="rgba(61,139,240,.16)" />
+        )}
+        {loadingBand && (
+          <rect x={X(loadingBand.from)} y={PAD.t} width={Math.max(2, X(loadingBand.to) - X(loadingBand.from))} height={H - PAD.t - PAD.b} fill="rgba(61,139,240,.13)" />
+        )}
+        {cutBand && (
+          <rect x={X(cutBand.from)} y={PAD.t} width={Math.max(2, X(cutBand.to) - X(cutBand.from))} height={H - PAD.t - PAD.b} fill="rgba(226,59,50,.12)" />
         )}
         {yTicks.map((v, i) => (
           <g key={i}>
@@ -80,8 +91,9 @@ export function LineChart({
         {/* 目標体重の横線（一目で「あと何kg」が分かるように） */}
         {hLine && hLine.y >= yMin && hLine.y <= yMax && (
           <g>
-            <line x1={PAD.l} x2={W - PAD.r} y1={Y(hLine.y)} y2={Y(hLine.y)} stroke="var(--amber)" strokeWidth="3" strokeDasharray="10 6" />
-            <text x={W - PAD.r - 4} y={Y(hLine.y) - 8} textAnchor="end" fontSize="17" fontStyle="italic" fill="var(--amber-ink)">{hLine.label}</text>
+            <line x1={PAD.l} x2={W - PAD.r} y1={Y(hLine.y)} y2={Y(hLine.y)} stroke="var(--amber)" strokeWidth="4.5" strokeDasharray="12 6" />
+            <rect x={W - PAD.r - 194} y={Y(hLine.y) - 35} width="190" height="30" rx="7" fill="var(--amber-soft)" stroke="var(--amber)" strokeWidth="1.5" />
+            <text x={W - PAD.r - 12} y={Y(hLine.y) - 13} textAnchor="end" fontSize="22" fontWeight="800" fill="var(--amber-ink)">{hLine.label}</text>
           </g>
         )}
         {/* 日付マーカー（目標日・計量・試合）。近い日付はラベルを縦にずらして重ならないようにする */}
