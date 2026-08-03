@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getDb } from "@/lib/store";
 import { UserTabbar, Hero } from "@/components/Nav";
-import { activeWaterCut, todosDone, inWaterCutWindow } from "@/lib/derive";
+import { activeWaterCut, todosDone, inWaterCutWindow, waterCutPhase } from "@/lib/derive";
 import { fmtDate, businessDate } from "@/lib/calc";
+
+const PHASE_LABEL: Record<string, string> = { loading: "ローディング期", cut: "水抜き期", weighin: "計量", recovery: "リカバリー", done: "" };
 
 export default async function RecordHub({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
   const sp = await searchParams;
@@ -59,7 +61,7 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
             </Link>
             <Link href="/u/watercut" className="todo-item" style={{ opacity: 0.85 }}>
               <span className="tk" style={{ fontSize: 18 }}>💧</span>
-              <span className="tt">WATER CUT / HYDRO（確認のみ）<br /><span className="meta" style={{ fontWeight: 400 }}>これまでの記録を見る</span></span>
+              <span className="tt">計量準備（確認のみ）<br /><span className="meta" style={{ fontWeight: 400 }}>これまでの記録を見る</span></span>
               <span className="ta">›</span>
             </Link>
             <Link href="/u/history" className="todo-item">
@@ -80,12 +82,12 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
         {/* 水抜きはプロ選手なら常に開ける（7日前からは自動で強調表示） */}
         {isPro && (
           <>
-            <Link href="/u/watercut" className="todo-item" style={{ borderColor: inWaterCutWindow(user) ? "var(--red)" : "var(--blue)" }}>
+            <Link href="/u/watercut" className="todo-item" style={{ borderColor: (waterCut || inWaterCutWindow(user)) ? "var(--red)" : "var(--blue)" }}>
               <span className="tk" style={{ fontSize: 18 }}>💧</span>
               <span className="tt">
-                WATER CUT / HYDRO<br />
+                {waterCut ? <>計量準備：<b style={{ color: "var(--red-bright)" }}>{PHASE_LABEL[waterCutPhase(waterCut)]}</b><span className="meta"> ・今ここ</span></> : "試合の計量準備（ウォーターローディング〜）"}<br />
                 <span className="meta" style={{ fontWeight: 400 }}>
-                  {waterCut ? "減少率・HYDROを見る／計量直前に追加で測ったら記録" : inWaterCutWindow(user) ? "計量が近づいています。水抜きを開始できます" : "計量に向けた水抜きモニタリング（いつでも開けます）"}
+                  {waterCut ? "ローディング→水抜き→計量→リカバリー。押して続きを記録" : inWaterCutWindow(user) ? "計量が近づいています。ここから始められます" : "ウォーターローディングから始める（試合前の計量に向けて）"}
                 </span>
               </span>
               <span className="ta">›</span>
