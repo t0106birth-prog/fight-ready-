@@ -66,8 +66,9 @@ export function RegisterForm({ gyms, presetGym }: { gyms: Gym[]; presetGym?: Gym
         <>
           <label className="fl" htmlFor="gymCode">チームコード（ジム・パーソナルトレーナーから配られたコード / QR）</label>
           <input id="gymCode" name="gymCode" type="text" placeholder="例: FIGHTBASE" autoCapitalize="characters" style={{ textTransform: "uppercase" }} />
-          <p className="info-note mt0">コードが分からないときは、下から選んでください（お試し用）。</p>
-          <select id="gymId" name="gymId" defaultValue={gyms[0]?.id}>
+          <p className="info-note mt0">コードが分からないときは「なし」でOK（あとでジムに紐付けできます）。下は動作確認用のサンプルジムです。</p>
+          <select id="gymId" name="gymId" defaultValue="none">
+            <option value="none">なし（あとで紐付け）</option>
             {gyms.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
         </>

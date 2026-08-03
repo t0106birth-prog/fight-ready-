@@ -22,6 +22,21 @@ export async function hqLogoutAction(): Promise<void> {
   redirect("/");
 }
 
+/** 本部から、選手/会員を任意のジムに紐付ける（無所属→ジム、別ジムへ移動も）。gymId="" で無所属に戻す。HQ解錠必須。 */
+export async function hqLinkGymAction(formData: FormData): Promise<void> {
+  if (!(await hasUnlock("fr_hq"))) redirect("/hq");
+  const userId = String(formData.get("userId") || "");
+  const gymId = String(formData.get("gymId") || "");
+  const db = await getDb();
+  if (gymId && !db.gyms.some((g) => g.id === gymId)) redirect(`/hq/user/${userId}`);
+  await mutateDb((d) => {
+    const u = d.users.find((x) => x.id === userId && (x.role === "pro" || x.role === "member"));
+    if (u) u.gymId = gymId;
+  });
+  await history(gymId, undefined, "hq_link_gym", userId);
+  redirect(`/hq/user/${userId}?linked=1`);
+}
+
 /** 本部からジムを停止/再開する（停止中はそのコードでの新規登録・参加を拒否）。HQ解錠必須。 */
 export async function hqToggleGymAction(formData: FormData): Promise<void> {
   if (!(await hasUnlock("fr_hq"))) redirect("/hq");

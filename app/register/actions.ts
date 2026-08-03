@@ -26,8 +26,10 @@ export async function registerAction(formData: FormData): Promise<void> {
   const gymCode = g("gymCode").toUpperCase();
   const byCode = gymCode ? db.gyms.find((x) => x.code.toUpperCase() === gymCode && !x.suspended) : undefined;
   if (gymCode && !byCode) fail("チームコードが見つかりません。コードを確認してください");
-  const gymId = byCode?.id || g("gymId") || db.gyms[0]?.id;
-  if (!gymId || !db.gyms.some((x) => x.id === gymId && !x.suspended)) fail("所属を選んでください（チームコードを入力してください）");
+  // 「なし」を選ぶ or コード・選択が無ければ無所属(gymId="")で登録。あとでマイページ or 本部から紐付け可能。
+  const selectedGym = g("gymId");
+  const gymId = byCode?.id ?? (selectedGym === "none" ? "" : selectedGym);
+  if (gymId && !db.gyms.some((x) => x.id === gymId && !x.suspended)) fail("所属を選んでください（チームコードを入力してください）");
 
   const sports = formData.getAll("sports").map(String) as CombatSport[];
   const primarySport = (g("primarySport") || sports[0] || undefined) as CombatSport | undefined;

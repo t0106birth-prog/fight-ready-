@@ -30,6 +30,8 @@ export default async function HqPage({ searchParams }: { searchParams: Promise<{
         .sort((a, b) => (a.v.level === "red" ? 0 : 1) - (b.v.level === "red" ? 0 : 1))
     : [];
   const recentLogins = db ? [...db.logins].slice(-15).reverse() : [];
+  // どのジムにも属していない選手/会員（登録時に「なし」を選んだ人）
+  const unaffiliated = activeUsers.filter((u) => (u.role === "pro" || u.role === "member") && !gyms.some((g) => g.id === u.gymId));
 
   return (
     <div className="shell">
@@ -99,6 +101,22 @@ export default async function HqPage({ searchParams }: { searchParams: Promise<{
               </div>
             );
           })}
+
+          {/* 無所属（未紐付け）の選手/会員。タップで詳細→ジムに紐付け可能 */}
+          {unaffiliated.length > 0 && (
+            <>
+              <p className="kicker">無所属（未紐付け）</p>
+              <div className="card">
+                <p className="meta mt0">{unaffiliated.length}名 — タップして詳細から「ジムに紐付け」できます。</p>
+                {unaffiliated.map((u) => (
+                  <Link key={u.id} href={`/hq/user/${u.id}`} className="progress-row" style={{ textDecoration: "none", color: "var(--ink)", borderTop: "1px solid var(--line)" }}>
+                    <span>{u.role === "pro" ? "🥊" : "💪"} {u.name}<span className="meta"> ・{sportLabel(u.primarySport)}</span></span>
+                    <span className="meta">›</span>
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
 
           {/* ログイン履歴（全ジム横断・直近15件） */}
           <p className="kicker">ログイン履歴（全体）</p>
