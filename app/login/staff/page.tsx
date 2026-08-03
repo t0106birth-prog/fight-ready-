@@ -23,6 +23,7 @@ export default async function StaffLogin({ searchParams }: { searchParams: Promi
         <SubmitButton className="btn btn-primary" pendingLabel="ログインしています…">ログイン</SubmitButton>
       </form>
       <p className="info-note">ジムスタッフは、所属ジムのすべての利用者を確認・管理できます。</p>
+      <p className="info-note mt0">パスワードを忘れたときは、管理者（本部）にご連絡ください。</p>
       <p className="center small">
         <Link href="/login/user">選手・一般会員の方はこちら</Link><br />
         <Link href="/">← 入口にもどる</Link>

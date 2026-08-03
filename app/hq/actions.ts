@@ -1,7 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { codeMatches, grantUnlock, clearUnlock } from "@/lib/unlock";
+import bcrypt from "bcryptjs";
+import { codeMatches, grantUnlock, clearUnlock, hasUnlock } from "@/lib/unlock";
+import { getDb, mutateDb, history } from "@/lib/store";
 
 /**
  * 本部（HQ）管理ページの暗証番号チェック。
@@ -18,4 +20,24 @@ export async function hqVerifyAction(formData: FormData): Promise<void> {
 export async function hqLogoutAction(): Promise<void> {
   await clearUnlock("fr_hq");
   redirect("/");
+}
+
+/**
+ * 本部から、メールアドレス指定で任意アカウント（スタッフ含む）のパスワードを再設定する。
+ * スタッフが自分のパスワードを忘れたときの最終手段。HQ解錠済みが必須。
+ */
+export async function hqResetPasswordAction(formData: FormData): Promise<void> {
+  if (!(await hasUnlock("fr_hq"))) redirect("/hq");
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const pw = String(formData.get("password") || "");
+  if (pw.length < 6) redirect("/hq?pw=short");
+  const db = await getDb();
+  const target = db.users.find((x) => x.email === email && x.status === "active");
+  if (!target) redirect("/hq?pw=notfound");
+  await mutateDb((d) => {
+    const u = d.users.find((x) => x.id === target!.id);
+    if (u) u.passwordHash = bcrypt.hashSync(pw, 8);
+  });
+  await history(target!.gymId, undefined, "hq_reset_password", target!.id);
+  redirect("/hq?pw=ok");
 }

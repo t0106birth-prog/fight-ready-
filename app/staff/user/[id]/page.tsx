@@ -11,12 +11,12 @@ import { dailyVerdict } from "@/lib/judge";
 import { sportLabel, bodyPartLabel, LV3, SLUGGISH, SWEAT } from "@/lib/constants";
 import { fmtDate, ageFrom } from "@/lib/calc";
 import { followAction } from "@/app/staff/follow/actions";
-import { ackUserAction, setUserRoleAction } from "@/app/staff/actions";
+import { ackUserAction, setUserRoleAction, resetUserPasswordAction } from "@/app/staff/actions";
 import { SubmitButton } from "@/components/SubmitButton";
 
 const FOLLOW_ACTIONS = ["連絡済み", "電話済み", "来館予定あり", "面談予定あり", "パーソナル体験案内済み", "パーソナル継続案内済み", "対応不要"];
 
-export default async function UserDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ acked?: string; role?: string }> }) {
+export default async function UserDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ acked?: string; role?: string; pw?: string }> }) {
   const { id } = await params;
   const sp = await searchParams;
   const staff = await currentUser();
@@ -79,6 +79,20 @@ export default async function UserDetail({ params, searchParams }: { params: Pro
             </SubmitButton>
           </form>
           <p className="info-note mt0">選手にすると計量・水抜きモニタリングが解放されます。一般に戻すと試合予定は消えます（過去の記録は残ります）。</p>
+        </div>
+
+        {/* パスワード再設定（本人がパスワードを忘れたとき。メール不要） */}
+        <div className="card tight" style={{ marginTop: 8 }}>
+          <b>🔑 パスワード再設定</b>
+          {sp.pw === "ok" && <div className="sig sig-green" style={{ marginTop: 4 }}>再設定しました。新しいパスワードを本人に伝えてください。</div>}
+          {sp.pw === "short" && <div className="field-error" style={{ marginTop: 4 }}>パスワードは6文字以上にしてください。</div>}
+          <form action={resetUserPasswordAction} style={{ marginTop: 6 }}>
+            <input type="hidden" name="userId" value={id} />
+            <input name="password" type="text" autoComplete="off" placeholder="新しい仮パスワード（6文字以上）" minLength={6} required />
+            <div style={{ height: 8 }} />
+            <SubmitButton className="btn btn-primary btn-sm" pendingLabel="再設定中…" style={{ width: "100%" }}>この人のパスワードを再設定</SubmitButton>
+          </form>
+          <p className="info-note mt0">本人がログインできなくなったとき用。設定した仮パスワードを伝え、後で本人に変更してもらってください。</p>
         </div>
 
         <p className="kicker">今日の状態</p>

@@ -23,6 +23,7 @@ export default async function UserLogin({ searchParams }: { searchParams: Promis
         <SubmitButton className="btn btn-accent" pendingLabel="ログインしています…">ログイン</SubmitButton>
       </form>
       <p className="info-note">共用の端末では、上のチェックを外してください。</p>
+      <p className="info-note mt0">パスワードを忘れたときは、所属ジムのスタッフに連絡すると再設定してもらえます。</p>
       <p className="center small">
         <Link href="/register">はじめての方（新規登録）</Link><br />
         <Link href="/login/staff">ジムスタッフの方はこちら</Link><br />

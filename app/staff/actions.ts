@@ -1,8 +1,28 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import bcrypt from "bcryptjs";
 import { currentUser, canView } from "@/lib/auth";
 import { mutateDb, appendRow, uid, nowIso, history } from "@/lib/store";
+
+/**
+ * スタッフが所属ジムの選手・一般会員のパスワードを再設定する（メール不要）。
+ * 他ジム・スタッフ自身には効かない。再設定した仮パスワードは本人に口頭等で伝える運用。
+ */
+export async function resetUserPasswordAction(formData: FormData): Promise<void> {
+  const staff = await currentUser();
+  if (!staff || staff.role !== "staff") redirect("/");
+  const userId = String(formData.get("userId") || "");
+  const pw = String(formData.get("password") || "");
+  if (!(await canView(staff!, userId))) redirect("/staff");
+  if (pw.length < 6) redirect(`/staff/user/${userId}?pw=short`);
+  await mutateDb((d) => {
+    const u = d.users.find((x) => x.id === userId && x.gymId === staff!.gymId && x.role !== "staff");
+    if (u) u.passwordHash = bcrypt.hashSync(pw, 8);
+  });
+  await history(staff!.gymId, staff!.id, "reset_password", userId);
+  redirect(`/staff/user/${userId}?pw=ok`);
+}
 
 /** ジムの基本情報を編集（設定から手動で登録） */
 export async function updateGymAction(formData: FormData): Promise<void> {

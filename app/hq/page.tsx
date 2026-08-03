@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { hasUnlock } from "@/lib/unlock";
-import { hqVerifyAction, hqLogoutAction } from "./actions";
+import { hqVerifyAction, hqLogoutAction, hqResetPasswordAction } from "./actions";
 import { SubmitButton } from "@/components/SubmitButton";
 
 /**
  * 本部（HQ）管理ページ。今は「暗証番号のログイン画面」だけ。
  * 正しい番号を入れると解錠され、中身（全体ダッシュボード等）はここに後から足す。
  */
-export default async function HqPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
+export default async function HqPage({ searchParams }: { searchParams: Promise<{ e?: string; pw?: string }> }) {
   const sp = await searchParams;
   const unlocked = await hasUnlock("fr_hq");
 
@@ -21,9 +21,25 @@ export default async function HqPage({ searchParams }: { searchParams: Promise<{
       {unlocked ? (
         <>
           <div className="alert-band alert-green" style={{ marginTop: 12 }}><b>🔓 解錠しました</b> — 本部管理ページ</div>
+          {/* パスワード再設定（スタッフ含む誰でも。メール不要） */}
           <div className="card">
-            <p className="mt0"><b>本部管理ページ（準備中）</b></p>
-            <p className="meta mt0">ここに全ジム一覧・利用者数・ログイン履歴などの本部ダッシュボードを後から追加します。今は入口だけです。</p>
+            <b>🔑 パスワード再設定（メール指定）</b>
+            {sp.pw === "ok" && <div className="sig sig-green" style={{ marginTop: 4 }}>再設定しました。新しいパスワードを本人に伝えてください。</div>}
+            {sp.pw === "short" && <div className="field-error" style={{ marginTop: 4 }}>パスワードは6文字以上にしてください。</div>}
+            {sp.pw === "notfound" && <div className="field-error" style={{ marginTop: 4 }}>そのメールのアカウントが見つかりません。</div>}
+            <form action={hqResetPasswordAction} style={{ marginTop: 6 }}>
+              <label className="fl mt0" htmlFor="pwemail">アカウントのメールアドレス</label>
+              <input id="pwemail" name="email" type="email" autoComplete="off" placeholder="例: staff@example.com" required />
+              <label className="fl" htmlFor="pwnew">新しい仮パスワード（6文字以上）</label>
+              <input id="pwnew" name="password" type="text" autoComplete="off" minLength={6} required />
+              <div style={{ height: 8 }} />
+              <SubmitButton className="btn btn-accent" pendingLabel="再設定中…">このアカウントのパスワードを再設定</SubmitButton>
+            </form>
+            <p className="info-note mt0">スタッフが自分のパスワードを忘れたときの最終手段。ここは全ジムのアカウントに効きます。</p>
+          </div>
+
+          <div className="card tight">
+            <p className="meta mt0">全ジム一覧・利用者数・ログイン履歴などの本部ダッシュボードは今後ここに追加します。</p>
           </div>
           <form action={hqLogoutAction}>
             <SubmitButton className="btn btn-dark" pendingLabel="…">本部からログアウト</SubmitButton>
