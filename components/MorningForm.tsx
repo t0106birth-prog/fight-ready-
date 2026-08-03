@@ -146,7 +146,7 @@ export function MorningForm({ ownerId, defaultWeight, waterCut, defaults, painDe
         </div>
       )}
 
-      <label className="fl" htmlFor="note">メモ（任意）</label>
+      <label className="fl" htmlFor="note">一言（任意）</label>
       <textarea id="note" name="note" rows={2} defaultValue={defaults?.freeNote ?? ""} />
 
       <div style={{ height: 14 }} />
