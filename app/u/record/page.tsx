@@ -23,6 +23,7 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
   const isFightDay = isPro && !!fightAt && businessDate(new Date(fightAt)) === businessDate();
   const saved = {
     morning: "朝のチェックを保存しました",
+    check: "今日のチェックを記録しました",
     activity: "運動記録を保存しました",
     running: "ランニングを保存しました",
     rest: "休養日・回復チェックを保存しました",
@@ -73,6 +74,8 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
           </>
         ) : (
         <>
+        {isPro ? (
+        <>
         <p className="kicker">今日の記録</p>
         {items.map((it) => (
           <Fragment key={it.href}>
@@ -88,6 +91,30 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
             )}
           </Fragment>
         ))}
+        </>
+        ) : (
+        <>
+        {/* 一般会員：1日1回の「今日のチェック」だけで主要記録が完了する。朝／夜の必須分割はしない。 */}
+        <p className="kicker">今日のチェック</p>
+        <Link href="/u/record/morning" className={`todo-item ${todos.morning ? "done" : ""}`}>
+          <span className="tk" style={{ fontSize: 18 }}>{todos.morning ? "✓" : "📝"}</span>
+          <span className="tt">今日のチェック<br /><span className="meta" style={{ fontWeight: 400 }}>約1分・1日1回・体重／体調／痛み／運動／食事をまとめて</span></span>
+          <span className={`sig ${todos.morning ? "sig-green" : "sig-blue"}`}>{todos.morning ? "完了" : "未記録"}</span>
+        </Link>
+        {todos.morning && (
+          <div className="alert-band alert-green" style={{ margin: "8px 0 0" }}>
+            <b>✓ 今日のチェック完了</b> おつかれさまでした。追加の入力は必要ありません。
+          </div>
+        )}
+
+        <p className="kicker">もっと記録する（任意）</p>
+        <p className="meta mt0">くわしく残したいときだけ。ここは入力しなくても今日の記録は完了です。</p>
+        <Link href="/u/record/activity" className="btn btn-ghost">🥊 運動の詳細（種目・時間・きつさ）</Link>
+        <Link href="/u/record/running" className="btn btn-ghost">🏃 ランニングの詳細</Link>
+        <Link href="/u/record/nutrition" className="btn btn-ghost">🍽️ 食事の内容をくわしく</Link>
+        <Link href="/u/record/rest" className="btn btn-ghost">🌙 夜の回復メモ</Link>
+        </>
+        )}
         {/* 水抜きはプロ選手なら常に開ける（7日前からは自動で強調表示） */}
         {isPro && (
           <>

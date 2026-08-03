@@ -73,6 +73,9 @@ export async function saveMorningAction(formData: FormData): Promise<void> {
   const u = await me();
   await assertOwner(formData, u);
   const date = today();
+  // 一般会員の「今日のチェック」統合フォームからの保存か。運動・食事もまとめて保存し、
+  // この画面に無い水抜き系の項目（尿・お通じ・危険症状など）は既存値を保持して勝手に消さない。
+  const isMemberCheck = str(formData, "memberCheck") === "1";
   const before = await getDb();
   const existing = before.dailyCheckins.find((c) => c.userId === u.id && c.date === date);
   const enteredWeight = numOrNull(formData, "weight");
@@ -85,12 +88,12 @@ export async function saveMorningAction(formData: FormData): Promise<void> {
     fatigueLevel: (str(formData, "fatigue") || undefined) as DailyCheckin["fatigueLevel"],
     sluggishnessLevel: (str(formData, "sluggish") || undefined) as DailyCheckin["sluggishnessLevel"],
     painLevel: (str(formData, "pain") || "none") as DailyCheckin["painLevel"],
-    otherSymptoms: formData.getAll("other").map(String),
-    urineColor: (str(formData, "urineColor") || undefined) as DailyCheckin["urineColor"],
-    hydrationThirst: (str(formData, "hydrationThirst") || undefined) as DailyCheckin["hydrationThirst"],
-    urineVolumeStatus: (str(formData, "urineVolumeStatus") || undefined) as DailyCheckin["urineVolumeStatus"],
-    bowel: (str(formData, "bowel") || undefined) as DailyCheckin["bowel"],
-    dangerSymptoms: formData.getAll("danger").map(String),
+    otherSymptoms: isMemberCheck ? existing?.otherSymptoms : formData.getAll("other").map(String),
+    urineColor: (isMemberCheck ? existing?.urineColor : (str(formData, "urineColor") || undefined)) as DailyCheckin["urineColor"],
+    hydrationThirst: (isMemberCheck ? existing?.hydrationThirst : (str(formData, "hydrationThirst") || undefined)) as DailyCheckin["hydrationThirst"],
+    urineVolumeStatus: (isMemberCheck ? existing?.urineVolumeStatus : (str(formData, "urineVolumeStatus") || undefined)) as DailyCheckin["urineVolumeStatus"],
+    bowel: (isMemberCheck ? existing?.bowel : (str(formData, "bowel") || undefined)) as DailyCheckin["bowel"],
+    dangerSymptoms: isMemberCheck ? existing?.dangerSymptoms : formData.getAll("danger").map(String),
     freeNote: str(formData, "note") || undefined,
     createdAt: existing?.createdAt ?? nowIso(),
   };
@@ -104,12 +107,37 @@ export async function saveMorningAction(formData: FormData): Promise<void> {
     createdAt: nowIso(),
   }));
 
+  // 一般会員の統合フォーム：運動/休養・食事のかんたん回答を既存テーブルへ反映する。
+  const dayChoice = isMemberCheck ? str(formData, "dayChoice") : "";
+  const nutritionGoal = isMemberCheck ? str(formData, "nutritionGoal") : "";
+
   let syncedWaterCut = false;
   await mutateDb((d) => {
     d.dailyCheckins = d.dailyCheckins.filter((c) => !(c.userId === u.id && c.date === date));
     d.dailyCheckins.push(checkin);
     d.painLogs = d.painLogs.filter((p) => !(p.userId === u.id && p.date === date));
     d.painLogs.push(...painLogs);
+
+    // 運動/休養のかんたん記録：日の区分(dayType)だけを更新し、既存の回復・行動記録は保持する。
+    if (dayChoice === "trained" || dayChoice === "rest") {
+      const dayType = dayChoice === "trained" ? "通常練習日" : "完全休養日";
+      const rest = d.restDayLogs.find((r) => r.userId === u.id && r.date === date);
+      if (rest) {
+        rest.dayType = dayType;
+      } else {
+        d.restDayLogs.push({ id: uid(), gymId: u.gymId, userId: u.id, date, dayType, createdAt: nowIso() });
+      }
+    }
+
+    // 食事達成度：達成度(goalAchieved)を更新し、既存の内訳(朝昼夜など)は保持する。
+    if (nutritionGoal === "done" || nutritionGoal === "partial" || nutritionGoal === "none") {
+      const existingNut = d.nutritionLogs.find((n) => n.userId === u.id && n.date === date);
+      d.nutritionLogs = d.nutritionLogs.filter((n) => !(n.userId === u.id && n.date === date));
+      d.nutritionLogs.push({
+        ...(existingNut ?? { id: uid(), gymId: u.gymId, userId: u.id, date, createdAt: nowIso() }),
+        goalAchieved: nutritionGoal as NutritionLog["goalAchieved"],
+      });
+    }
 
     // 水抜き中は朝の体重を同日の水抜きログにも反映し、二重入力を避ける。
     const period = d.waterCutPeriods.find((p) => p.userId === u.id && p.status === "active");
@@ -135,9 +163,9 @@ export async function saveMorningAction(formData: FormData): Promise<void> {
       syncedWaterCut = true;
     }
   });
-  await history(u.gymId, u.id, "morning_check");
+  await history(u.gymId, u.id, isMemberCheck ? "member_check" : "morning_check");
   if (syncedWaterCut) await history(u.gymId, u.id, "watercut_daily_sync");
-  redirect("/u/record?saved=morning");
+  redirect(isMemberCheck ? "/u/record?saved=check" : "/u/record?saved=morning");
 }
 
 /** 運動記録(§16) */

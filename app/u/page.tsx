@@ -53,11 +53,14 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
     : false;
   const goalToGo = weighInTarget != null && cw != null ? round1(Math.abs(cw - weighInTarget)) : null;
 
-  const todoList = [
+  // 一般会員は1日1回の「今日のチェック」だけで完了。プロは測定タイミングが重要なので従来の項目を維持。
+  const todoList = isPro ? [
     { key: "morning", label: "朝のチェック", href: "/u/record/morning", done: todos.morning },
     { key: "activity", label: "運動記録", href: "/u/record/activity", done: todos.activity },
     { key: "nutrition", label: "食事達成度", href: "/u/record/nutrition", done: todos.nutrition },
     { key: "night", label: "夜の回復チェック", href: "/u/record/rest", done: todos.night },
+  ] : [
+    { key: "check", label: "今日のチェック", href: "/u/record/morning", done: todos.morning },
   ];
   const completedTodos = todoList.filter((t) => t.done).length;
   const nextTodo = todoList.find((t) => !t.done);
@@ -101,9 +104,9 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
           </div>
         ) : (
           <>
-            {/* 13-1 今日のメッセージ */}
+            {/* 13-1 今日のメッセージ（時間帯に依存しない言い回しにする） */}
             <div className="card">
-              <p className="mt0" style={{ fontWeight: 700 }}>おはようございます。今日の身体の状態を記録しましょう。</p>
+              <p className="mt0" style={{ fontWeight: 700 }}>{isPro ? "今日の身体の状態を記録しましょう。" : "今日のチェックで、今日の記録は完了します。"}</p>
               <p className="meta" style={{ marginBottom: 0 }}>
                 {verdict.reasons.slice(0, 2).join("。")}。
               </p>
