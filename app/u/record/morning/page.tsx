@@ -3,7 +3,7 @@ import { currentUser } from "@/lib/auth";
 import { getDb } from "@/lib/store";
 import { Hero, UserTabbar } from "@/components/Nav";
 import { MorningForm } from "@/components/MorningForm";
-import { activeWaterCut, currentWeight, latestWaterCutLog, isFightDay } from "@/lib/derive";
+import { activeWaterCut, currentWeight, latestWaterCutLog, isFightDay, waterCutPhase } from "@/lib/derive";
 import { acuteLoss } from "@/lib/judge";
 import { round1 } from "@/lib/calc";
 import { today } from "@/lib/store";
@@ -20,12 +20,17 @@ export default async function MorningPage({ searchParams }: { searchParams: Prom
   const painDefaults = db.painLogs.filter((p) => p.userId === user.id && p.date === today());
   const wcLog = period ? latestWaterCutLog(db, user.id, period.id) : null;
   const latestMeasured = wcLog?.currentWeight ?? cw;
+  const phase = period ? waterCutPhase(period) : undefined;
+  const phaseBaseline = period && phase && phase !== "loading"
+    ? period.cutBaselineWeight ?? period.baselineWeight
+    : period?.baselineWeight;
   const waterCut = period
     ? {
-        baselineWeight: period.baselineWeight,
+        phase: phase!,
+        baselineWeight: phaseBaseline!,
         targetWeight: period.targetWeight,
         currentWeight: latestMeasured ?? period.baselineWeight,
-        currentLossPct: acuteLoss(period.baselineWeight, latestMeasured ?? period.baselineWeight).pct,
+        currentLossPct: acuteLoss(phaseBaseline!, latestMeasured ?? phaseBaseline!).pct,
         remainingKg: Math.max(0, round1((latestMeasured ?? period.baselineWeight) - period.targetWeight)),
       }
     : undefined;

@@ -140,7 +140,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
           <div className="card">
             <label className="fl mt0" htmlFor="foodGoal">今の食事で気をつけること（1つ）</label>
             <input id="foodGoal" name="foodGoal" type="text" defaultValue={user.foodGoal ?? ""} placeholder="例：夜の間食を控える / たんぱく質をとる / 水分をこまめに" maxLength={40} />
-            <p className="info-note mt0">毎日の「食事達成度」で、この目標に対して〈できた／一部／できなかった〉を選びます。</p>
+            <p className="info-note mt0">毎日の「食事達成度」で、この目標に対して〈目標どおり／だいたいできた／できなかった〉を選びます。</p>
           </div>
 
           {/* 計量・大会（プロのみ） */}

@@ -7,11 +7,13 @@ import { DANGER_SYMPTOMS, OTHER_SYMPTOMS, BOWEL, URINE_COLOR } from "@/lib/const
 import { saveMorningAction } from "@/app/u/actions";
 import { OwnerField } from "@/components/OwnerField";
 import type { DailyCheckin, PainLog } from "@/lib/types";
+import type { WaterCutPhase } from "@/lib/derive";
 import { signed } from "@/lib/calc";
 
 const URINE_HEX: Record<string, string> = { light: "#f4e9a8", normal: "#e6c94a", dark: "#c8931f", very_dark: "#8a5a12" };
 
 interface MorningWaterCut {
+  phase: WaterCutPhase;
   baselineWeight: number;
   targetWeight: number;
   currentWeight: number;
@@ -22,6 +24,11 @@ interface MorningWaterCut {
 export function MorningForm({ ownerId, defaultWeight, waterCut, defaults, painDefaults = [] }: { ownerId: string; defaultWeight?: number; waterCut?: MorningWaterCut; defaults?: DailyCheckin; painDefaults?: PainLog[] }) {
   const [pain, setPain] = useState(defaults?.painLevel ?? "none");
   const [danger, setDanger] = useState((defaults?.dangerSymptoms?.length ?? 0) > 0);
+  const phaseLabel = waterCut?.phase === "loading" ? "減量＋ローディング中"
+    : waterCut?.phase === "cut" ? "減量＋水抜き中"
+      : waterCut?.phase === "weighin" ? "減量＋計量中"
+        : waterCut?.phase === "recovery" ? "計量後リカバリー中"
+          : "減量中";
 
   return (
     <form action={saveMorningAction} className="card">
@@ -30,13 +37,13 @@ export function MorningForm({ ownerId, defaultWeight, waterCut, defaults, painDe
         <section id="watercut" className="watercut-daily">
           <div className="watercut-daily-head">
             <div>
-              <span className="badge badge-attn">水抜き中</span>
-              <b>今日の体重を水抜き記録にも反映します</b>
+              <span className="badge badge-attn">{phaseLabel}</span>
+              <b>今日の体重を計量準備の記録にも反映します</b>
             </div>
             <a href="/u/watercut">詳細を見る ›</a>
           </div>
           <div className="watercut-daily-grid">
-            <div><span>水抜き開始</span><b>{waterCut.baselineWeight}kg</b></div>
+            <div><span>{waterCut.phase === "loading" ? "計量準備開始" : "水抜き開始"}</span><b>{waterCut.baselineWeight}kg</b></div>
             <div><span>計量目標</span><b>{waterCut.targetWeight}kg</b></div>
             <div><span>開始から</span><b>{signed(-waterCut.currentLossPct, "%")}</b></div>
             <div><span>計量まで</span><b>あと {waterCut.remainingKg}kg</b></div>
@@ -90,7 +97,7 @@ export function MorningForm({ ownerId, defaultWeight, waterCut, defaults, painDe
       </div>
 
       {/* 水抜き中の追加チェック（水分関連なので尿の色などと同じ下段にまとめる） */}
-      {waterCut && (
+      {waterCut?.phase === "cut" && (
         <div className="watercut-extra">
           <p className="kicker">水抜き中の追加チェック</p>
           <label className="fl">口の渇き</label>

@@ -158,6 +158,6 @@ function currentWeightLabel(db: DB, user: User) {
   return w != null ? `${round1(w)}kg` : "—";
 }
 const recoveryLabel = (r: string) => ({ much: "かなり回復", some: "少し回復", same: "変わらない", worse: "悪化" }[r] ?? r);
-const achieveLabel = (a: string) => ({ done: "できた", partial: "一部", none: "未達" }[a] ?? a);
+const achieveLabel = (a: string) => ({ done: "目標どおり", partial: "だいたい", none: "未達" }[a] ?? a);
 
 export { untilLabel };
