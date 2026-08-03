@@ -81,6 +81,7 @@ export function MorningForm({ ownerId, defaultWeight, waterCut, defaults, painDe
         <label><input type="radio" name="pain" value="some" defaultChecked={defaults?.painLevel === "some"} onChange={() => setPain("some")} />少しある</label>
         <label><input type="radio" name="pain" value="strong" defaultChecked={defaults?.painLevel === "strong"} onChange={() => setPain("strong")} />強い</label>
       </div>
+      <p className="info-note">「少しある」「強い」を選ぶと、人型の図で痛む場所を記録できます。</p>
 
       {pain !== "none" && (
         <div style={{ marginTop: 10 }}>

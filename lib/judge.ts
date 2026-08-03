@@ -260,14 +260,26 @@ export function dailyVerdict(db: DB, user: User): Verdict {
 
 export function weightProgress(user: User, db: DB): { text: string; level: Signal } | null {
   if (!user.targetWeight || !user.targetDate || user.startWeight == null) return null;
+  // 目標が開始体重と同じならプラン方向が定まらない → 評価しない（誤判定ガード）
+  const goalDelta = round1(user.targetWeight - user.startWeight);
+  if (goalDelta === 0) return null;
+  const isLossPlan = goalDelta < 0; // 目標＜開始 = 減量プラン
   const weights = db.dailyCheckins
     .filter((c) => c.userId === user.id && c.weight != null)
     .sort((a, b) => (a.date < b.date ? 1 : -1));
-  const current = weights[0]?.weight ?? user.startWeight;
+  const current = (weights[0]?.weight ?? user.startWeight) as number;
   const startDate = user.createdAt.slice(0, 10);
   const planned = plannedWeight(user.startWeight, startDate, user.targetWeight, user.targetDate, todayStr());
-  const diff = round1((current as number) - planned);
+  const diff = round1(current - planned); // ＋＝予定より重い / −＝予定より軽い
   if (Math.abs(diff) <= 0.4) return { text: "予定どおりです", level: "green" };
-  if (diff > 0) return { text: `予定より${diff}kg 遅れています`, level: "yellow" };
-  return { text: `予定より速く落ちています（${Math.abs(diff)}kg）`, level: "yellow" };
+  if (isLossPlan) {
+    // 減量プラン：重い＝遅れ、軽い＝速く落ちている
+    return diff > 0
+      ? { text: `予定より${diff}kg 遅れています`, level: "yellow" }
+      : { text: `予定より速く落ちています（${Math.abs(diff)}kg）`, level: "yellow" };
+  }
+  // 増量プラン：軽い＝遅れ、重い＝順調。減量プランと取り違えて「速く落ちている」とは言わない
+  return diff < 0
+    ? { text: `予定より${Math.abs(diff)}kg 遅れています`, level: "yellow" }
+    : { text: `予定より${diff}kg 増えています`, level: "green" };
 }
