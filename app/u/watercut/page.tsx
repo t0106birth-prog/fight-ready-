@@ -315,9 +315,16 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
           </div>
         )}
 
-        {/* 尿比重(HYDRO)の記録はいつでもできるよう常時リンク（ONE以外・水抜き以降） */}
-        {!isOne && phase !== "loading" && !showRecovery && (
-          <Link href="/u/watercut/hydro" className="btn btn-ghost btn-sm" style={{ width: "100%" }}>💧 尿比重・HYDROを記録（尿の色・症状も）</Link>
+        {/* 尿比重(HYDRO)：どのフェーズでも記録できるよう、独立したカードで（詳しく見るの外・上に置く） */}
+        {!isOne && !showRecovery && (
+          <div className="card tight" style={{ borderColor: "var(--blue)" }}>
+            <div className="row">
+              <b>💧 尿比重・HYDRO</b>
+              {hydro?.urineSpecificGravity != null && <b className={`tile-${hydroTone}`}>{hydro.urineSpecificGravity.toFixed(3)}</b>}
+            </div>
+            <p className="info-note mt0">尿比重・尿の色・症状を記録できます（測ったときに入れてください）。</p>
+            <Link href="/u/watercut/hydro" className="btn btn-primary btn-sm" style={{ width: "100%" }}>尿比重・HYDROを記録する</Link>
+          </div>
         )}
 
         {/* 計量後：リカバリー案内 */}
@@ -334,7 +341,7 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
 
         {/* ── くわしく見る（早見表・HYDRO・ONE・過去実績・注意をすべて畳む）── */}
         <details className="card tight" style={{ marginTop: 8 }}>
-          <summary><b>くわしく見る</b><span className="meta">　早見表・HYDRO・過去の実績・注意</span></summary>
+          <summary style={{ cursor: "pointer" }}><b>▾ くわしく見る</b><span className="meta">　危険度の早見表・過去の実績・使い方・注意</span></summary>
           <div style={{ marginTop: 12 }}>
             <div className={`alert-band ${bandClass[band.level]}`} style={{ marginTop: 0 }}>
               <div className="at">{band.title}</div>{band.message}（いま {lossPctLabel}／{lossKgLabel}）
