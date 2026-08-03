@@ -175,7 +175,7 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
                   <div className="row" style={{ alignItems: "center" }}>
                     <div>
                       <b>計量準備・{phase === "loading" ? "ローディング中" : phase === "cut" ? "水抜き中" : phase === "weighin" ? "計量中" : "リカバリー中"}</b>
-                      <p className="small" style={{ margin: "5px 0 0" }}>計量まで {untilLabel(period.weighInDatetime)} ・ 開始から −{pct}%</p>
+                      <p className="small" style={{ margin: "5px 0 0" }}>計量まで {untilLabel(period.weighInDatetime)} ・ 開始から {pct > 0 ? `−${pct}` : `+${Math.abs(pct)}`}%</p>
                     </div>
                     <span style={{ color: "var(--muted)", fontSize: "1.35rem" }}>›</span>
                   </div>
