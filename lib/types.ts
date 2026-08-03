@@ -198,6 +198,7 @@ export interface WaterCutPeriod {
   fightDatetime?: string;
   status: "active" | "recovery" | "done";
   // フェーズ: ローディング(cutStartedAt未設定) → 水抜き(cutStartedAt設定) → 計量/リカバリー(status)。
+  plan?: "full" | "cutonly" | "loadingonly"; // 進め方: フル / 水抜きのみ(ローディングなし) / ローディングのみ(水抜きなし)
   loadingTargetLiters?: number; // ウォーターローディングの1日の水分目標(L)。本人が選ぶ
   cutStartedAt?: string;        // 「水抜きを開始する」を押した日時（ローディング→水抜きの切替）
   cutBaselineWeight?: number;   // 水抜き開始時の体重（ローディングで増えた"山"。水抜きの%はここから測る）

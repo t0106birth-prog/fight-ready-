@@ -304,9 +304,16 @@ export async function startWaterCutAction(formData: FormData): Promise<void> {
     weighInDatetime: fromDateTimeLocal(str(formData, "weighIn")) || nowIso(),
     fightDatetime: str(formData, "fight") ? fromDateTimeLocal(str(formData, "fight")) : undefined,
     status: "active",
-    loadingTargetLiters: numOrU(formData, "loadingTarget"), // ウォーターローディングの1日の水分目標(L)
     createdAt: nowIso(),
   };
+  // 進め方: full=ローディングから / cutonly=水抜きのみ(最初から水抜き期) / loadingonly=ローディングのみ(水抜きなし)
+  const plan = (str(formData, "plan") || "full") as "full" | "cutonly" | "loadingonly";
+  period.plan = plan;
+  period.loadingTargetLiters = plan === "cutonly" ? undefined : numOrU(formData, "loadingTarget");
+  if (plan === "cutonly") {
+    period.cutStartedAt = nowIso();
+    period.cutBaselineWeight = baseline!;
+  }
   await mutateDb((d) => {
     d.waterCutPeriods.push(period);
   });

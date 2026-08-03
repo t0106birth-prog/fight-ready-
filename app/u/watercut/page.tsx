@@ -208,6 +208,9 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
         )}
 
         {/* フェーズを進める：ローディング→水抜き。ここで"水抜き開始体重"を改めて記録する */}
+        {phase === "loading" && period.plan === "loadingonly" && (
+          <p className="info-note center">この準備は「ローディングのみ（水抜きなし）」。計量まで体重を見守ります。必要なら下から水抜きへ進めます。</p>
+        )}
         {phase === "loading" && (
           <form action={startCutPhaseAction} className="card tight" style={{ borderColor: "var(--blue)" }}>
             <OwnerField id={user.id} />
@@ -228,8 +231,28 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
           </form>
         )}
 
-        {/* HYDROを測ったら記録（水抜き以降） */}
-        {showHydro && phase !== "loading" && !showRecovery && (
+        {/* ONE Championship：尿比重(ハイドレーション)が主役なので主画面に出す */}
+        {isOne && (
+          <div className="card" style={{ borderColor: "var(--blue)" }}>
+            <b>💧 ONE ハイドレーション</b>
+            <div className="progress-row" style={{ marginTop: 4 }}><span className="meta">尿比重</span><b className={`tile-${hydroTone}`}>{hydro?.urineSpecificGravity != null ? hydro.urineSpecificGravity.toFixed(4) : "未測定"}</b></div>
+            <div className="progress-row"><span className="meta">契約体重</span><b>{user.contractWeightKg ?? "—"}kg</b><span className="meta">（基準 1.0250 以下）</span></div>
+            {oneBand && <div className={`alert-band ${bandClass[oneBand.level]}`} style={{ margin: "8px 0 0" }}><div className="at">{oneBand.title}</div>{oneBand.message}</div>}
+            {oneVerdict && <div className={`alert-band ${bandClass[oneVerdict.level === "green" ? "green" : oneVerdict.level]}`} style={{ margin: "8px 0 0" }}><div className="at">{oneVerdict.label}</div>{oneVerdict.reasons.join(" ")}</div>}
+            {latestHydrated && (
+              <div className="card tight" style={{ marginTop: 8 }}>
+                <b>ハイドレーテッド体重</b>
+                <div className="progress-row"><span>最新（尿比重1.0250以下で同時測定）</span><b>{round1(latestHydrated.simultaneousWeight!)}kg</b></div>
+                <div className="progress-row"><span>契約体重までの差</span><b>{round1(latestHydrated.simultaneousWeight! - (user.contractWeightKg ?? 0))}kg</b></div>
+              </div>
+            )}
+            <Link href="/u/watercut/hydro" className="btn btn-primary btn-sm" style={{ width: "100%", marginTop: 8 }}>💧 尿比重・体重を記録する</Link>
+            <p className="info-note mt0">ONE公式は計量前にハイドレーションテスト（尿比重1.0250以下）合格→体重測定。公式結果が最終。これはプレチェック用です。</p>
+          </div>
+        )}
+
+        {/* HYDROを測ったら記録（ONE以外・水抜き以降） */}
+        {showHydro && !isOne && phase !== "loading" && !showRecovery && (
           <Link href="/u/watercut/hydro" className="btn btn-ghost btn-sm" style={{ width: "100%" }}>💧 HYDROを記録（尿比重・尿の色・症状）</Link>
         )}
 
@@ -247,7 +270,7 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
 
         {/* ── くわしく見る（早見表・HYDRO・ONE・過去実績・注意をすべて畳む）── */}
         <details className="card tight" style={{ marginTop: 8 }}>
-          <summary><b>くわしく見る</b><span className="meta">　早見表・HYDRO・過去の実績{isOne ? "・ONE" : ""}・注意</span></summary>
+          <summary><b>くわしく見る</b><span className="meta">　早見表・HYDRO・過去の実績・注意</span></summary>
           <div style={{ marginTop: 12 }}>
             <div className={`alert-band ${bandClass[band.level]}`} style={{ marginTop: 0 }}>
               <div className="at">{band.title}</div>{band.message}（いま {lossPctLabel}／{lossKgLabel}）
@@ -286,23 +309,6 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
                   </tbody>
                 </table>
                 <Link href="/u/watercut/hydro" className="btn btn-primary btn-sm" style={{ width: "100%", marginTop: 8 }}>💧 HYDROを記録する</Link>
-              </>
-            )}
-
-            {isOne && (
-              <>
-                <p className="kicker">ONE Championship 対応</p>
-                <p className="meta mt0">契約体重: <b>{user.contractWeightKg ?? "—"}kg</b>（ONE参考基準: 尿比重 1.0250 以下）</p>
-                {oneBand && <div className={`alert-band ${bandClass[oneBand.level]}`}><div className="at">{oneBand.title}</div>{oneBand.message}</div>}
-                {oneVerdict && <div className={`alert-band ${bandClass[oneVerdict.level === "green" ? "green" : oneVerdict.level]}`}><div className="at">{oneVerdict.label}</div>{oneVerdict.reasons.join(" ")}</div>}
-                {latestHydrated && (
-                  <div className="card tight">
-                    <b>ハイドレーテッド体重</b>
-                    <div className="progress-row"><span>最新（尿比重1.0250以下で同時測定）</span><b>{round1(latestHydrated.simultaneousWeight!)}kg</b></div>
-                    <div className="progress-row"><span>契約体重までの差</span><b>{round1(latestHydrated.simultaneousWeight! - (user.contractWeightKg ?? 0))}kg</b></div>
-                  </div>
-                )}
-                <p className="info-note">ONE公式計量は大会24〜48時間前。先にハイドレーションテスト（尿比重1.0250以下）合格→体重測定。公式スタッフの結果が最終。これはプレチェック用の参考機能です。</p>
               </>
             )}
 

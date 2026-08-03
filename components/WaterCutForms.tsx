@@ -14,6 +14,7 @@ export function StartWaterCutForm({
 }) {
   const [baseline, setBaseline] = useState(defaultBaseline?.toString() ?? "");
   const [target, setTarget] = useState(defaultTarget?.toString() ?? "");
+  const [plan, setPlan] = useState<"full" | "cutonly" | "loadingonly">("full");
   const baselineNumber = Number(baseline);
   const targetNumber = Number(target);
   const hasPlan = baselineNumber > 0 && targetNumber > 0;
@@ -23,6 +24,17 @@ export function StartWaterCutForm({
   return (
     <form action={startWaterCutAction} className="card">
       <OwnerField id={ownerId} />
+      <input type="hidden" name="plan" value={plan} />
+      <label className="fl mt0">この準備の進め方</label>
+      <div className="seg wrap">
+        <label><input type="radio" name="planUi" checked={plan === "full"} onChange={() => setPlan("full")} />ローディング→水抜き</label>
+        <label><input type="radio" name="planUi" checked={plan === "cutonly"} onChange={() => setPlan("cutonly")} />水抜きのみ</label>
+        <label><input type="radio" name="planUi" checked={plan === "loadingonly"} onChange={() => setPlan("loadingonly")} />ローディングのみ</label>
+      </div>
+      <p className="info-note mt0">
+        {plan === "full" ? "水を貯めてから抜く、標準の流れ。" : plan === "cutonly" ? "ローディングはせず、最初から水抜き期で始めます。" : "水抜きはせず、計量まで体重を見守ります。"}
+        あとで変更もできます。
+      </p>
       <div className="alert-band alert-blue">
         <div className="at">測定条件をそろえてください</div>
         基準体重は、できる限り「起床後・排尿後・飲食前・同じ体重計」で登録してください。これは条件をそろえるための案内であり、水抜き方法の指示ではありません。
@@ -67,9 +79,13 @@ export function StartWaterCutForm({
       <label className="fl" htmlFor="fight">試合日時</label>
       <input id="fight" name="fight" type="datetime-local" defaultValue={toDateTimeLocalValue(defaultFight)} />
 
-      <label className="fl" htmlFor="loadingTarget">ローディング水分目標（1日・L）<span className="meta"> 任意</span></label>
-      <input id="loadingTarget" name="loadingTarget" type="number" min="0" max="20" step="0.5" inputMode="decimal" placeholder="例：7.5" />
-      <p className="info-note mt0">計量前に水を多めに飲む「ウォーターローディング」の1日の目標量。自分で決めてOK（日々の記録で実際の量を入れられます）。空欄でも始められます。</p>
+      {plan !== "cutonly" && (
+        <>
+          <label className="fl" htmlFor="loadingTarget">ローディング水分目標（1日・L）<span className="meta"> 任意</span></label>
+          <input id="loadingTarget" name="loadingTarget" type="number" min="0" max="20" step="0.5" inputMode="decimal" placeholder="例：7.5" />
+          <p className="info-note mt0">計量前に水を多めに飲む「ウォーターローディング」の1日の目標量。自分で決めてOK（日々の記録で実際の量を入れられます）。空欄でも始められます。</p>
+        </>
+      )}
 
       <div style={{ height: 14 }} />
       <SubmitButton className="btn btn-primary" pendingLabel="開始しています…">計量準備をはじめる</SubmitButton>
