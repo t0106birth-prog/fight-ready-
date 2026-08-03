@@ -59,6 +59,21 @@ export async function hqDeleteGymAction(formData: FormData): Promise<void> {
   redirect("/hq?gymdel=1");
 }
 
+/**
+ * 本部から選手/会員アカウントを停止/再開する。停止中はログイン不可・各一覧から除外される。
+ * 停止すると、ログイン中でも次のリクエストで弾かれる（currentUser が status="active" のみ返すため）。HQ解錠必須。
+ */
+export async function hqToggleUserAction(formData: FormData): Promise<void> {
+  if (!(await hasUnlock("fr_hq"))) redirect("/hq");
+  const userId = String(formData.get("userId") || "");
+  await mutateDb((d) => {
+    const u = d.users.find((x) => x.id === userId && (x.role === "pro" || x.role === "member"));
+    if (u) u.status = u.status === "active" ? "suspended" : "active";
+  });
+  await history("", undefined, "hq_toggle_user", userId);
+  redirect(`/hq/user/${userId}?acct=1`);
+}
+
 /** 本部からジムを停止/再開する（停止中はそのコードでの新規登録・参加を拒否）。HQ解錠必須。 */
 export async function hqToggleGymAction(formData: FormData): Promise<void> {
   if (!(await hasUnlock("fr_hq"))) redirect("/hq");

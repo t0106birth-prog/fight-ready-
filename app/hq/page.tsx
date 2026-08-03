@@ -32,6 +32,8 @@ export default async function HqPage({ searchParams }: { searchParams: Promise<{
   const recentLogins = db ? [...db.logins].slice(-15).reverse() : [];
   // どのジムにも属していない選手/会員（登録時に「なし」を選んだ人）
   const unaffiliated = activeUsers.filter((u) => (u.role === "pro" || u.role === "member") && !gyms.some((g) => g.id === u.gymId));
+  // 停止中の選手/会員（active一覧から外れるので、再開できるよう別枠で出す）
+  const suspendedUsers = db ? db.users.filter((u) => u.status !== "active" && (u.role === "pro" || u.role === "member")) : [];
 
   return (
     <div className="shell">
@@ -121,6 +123,21 @@ export default async function HqPage({ searchParams }: { searchParams: Promise<{
                 {unaffiliated.map((u) => (
                   <Link key={u.id} href={`/hq/user/${u.id}`} className="progress-row" style={{ textDecoration: "none", color: "var(--ink)", borderTop: "1px solid var(--line)" }}>
                     <span>{u.role === "pro" ? "🥊" : "💪"} {u.name}<span className="meta"> ・{sportLabel(u.primarySport)}</span></span>
+                    <span className="meta">›</span>
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* 停止中のアカウント（再開できるよう別枠） */}
+          {suspendedUsers.length > 0 && (
+            <>
+              <p className="kicker">停止中のアカウント</p>
+              <div className="card">
+                {suspendedUsers.map((u) => (
+                  <Link key={u.id} href={`/hq/user/${u.id}`} className="progress-row" style={{ textDecoration: "none", color: "var(--ink)", borderTop: "1px solid var(--line)" }}>
+                    <span>⛔ {u.name}<span className="meta"> ・{gymName(u.gymId)}</span></span>
                     <span className="meta">›</span>
                   </Link>
                 ))}

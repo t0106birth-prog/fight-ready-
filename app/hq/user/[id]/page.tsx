@@ -9,13 +9,13 @@ import { dailyVerdict, acuteLoss } from "@/lib/judge";
 import { SubmitButton } from "@/components/SubmitButton";
 import { sportLabel, LV3, SLUGGISH } from "@/lib/constants";
 import { fmtDate, ageFrom, untilLabel, round1 } from "@/lib/calc";
-import { hqLinkGymAction } from "../../actions";
+import { hqLinkGymAction, hqToggleUserAction } from "../../actions";
 
 /**
  * 本部（HQ）用の利用者詳細（全ジム横断・読み取り専用）。
  * fr_hq 解錠が必須。スタッフ画面と違い、どのジムの選手/会員でも中身を確認できる。
  */
-export default async function HqUserDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ linked?: string }> }) {
+export default async function HqUserDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ linked?: string; acct?: string }> }) {
   const { id } = await params;
   const sp = await searchParams;
   if (!(await hasUnlock("fr_hq"))) redirect("/hq");
@@ -74,6 +74,24 @@ export default async function HqUserDetail({ params, searchParams }: { params: P
               <SubmitButton className="btn btn-primary btn-sm" pendingLabel="…">紐付ける</SubmitButton>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* アカウント停止/再開（停止中はログイン不可・各一覧から除外） */}
+      {linkable && (
+        <div className="card tight" style={{ marginTop: 8 }}>
+          <div className="row">
+            <span className="meta">アカウント</span>
+            <b style={{ color: user.status === "active" ? "var(--green-bright)" : "var(--red-bright)" }}>{user.status === "active" ? "有効" : "停止中"}</b>
+          </div>
+          {sp.acct && <div className="sig sig-green" style={{ marginTop: 4 }}>アカウントの状態を更新しました。</div>}
+          <form action={hqToggleUserAction} style={{ marginTop: 6 }}>
+            <input type="hidden" name="userId" value={id} />
+            <SubmitButton className={`btn-sm ${user.status === "active" ? "btn-accent" : "btn-green"}`} pendingLabel="…" style={{ width: "100%" }}>
+              {user.status === "active" ? "このアカウントを停止する" : "このアカウントを再開する"}
+            </SubmitButton>
+          </form>
+          <p className="info-note mt0">停止すると本人はログインできなくなり、一覧からも外れます（記録は残ります）。</p>
         </div>
       )}
 
