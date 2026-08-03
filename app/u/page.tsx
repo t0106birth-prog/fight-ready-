@@ -150,7 +150,7 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
           {tiles.map((t) => <StatusTile key={t.lbl} tile={t} />)}
         </div>
 
-        {/* 水抜き（WATER CUT / HYDRO）— プロは常にホームからカードで開ける */}
+        {/* 進行中だけ再開入口を出す。未開始時は記録画面から開始する。 */}
         {isPro && (() => {
           const period = activeWaterCut(db, user.id);
           if (period) {
@@ -161,26 +161,17 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
             const rem = round1(cur - period.targetWeight);
             return (
               <>
-                <p className="kicker">水抜き（WATER CUT / HYDRO）</p>
+                <p className="kicker">進行中の計量準備</p>
                 <Link href="/u/watercut" className="card" style={{ display: "block", color: "var(--ink)", borderColor: "var(--blue)" }}>
-                  <div className="row"><b>WATER CUT / HYDRO</b><span className={`sig sig-${tone}`}>開始から −{pct}%</span></div>
+                  <div className="row"><b>計量準備を続ける</b><span className={`sig sig-${tone}`}>開始から −{pct}%</span></div>
                   <div className="progress-row"><span>計量まで残り</span><b>あと {rem > 0 ? rem : 0}kg</b></div>
                   <div className="progress-row"><span>計量まで</span><b>{untilLabel(period.weighInDatetime)}</b></div>
-                  <p className="small" style={{ marginBottom: 0, color: "var(--blue)" }}>水抜き・HYDROを開く ›</p>
+                  <p className="small" style={{ marginBottom: 0, color: "var(--blue)" }}>続きの記録を開く ›</p>
                 </Link>
               </>
             );
           }
-          return (
-            <>
-              <p className="kicker">水抜き（WATER CUT / HYDRO）</p>
-              <Link href="/u/watercut" className="card" style={{ display: "block", color: "var(--ink)", borderColor: "var(--blue)" }}>
-                <b>💧 WATER CUT / HYDRO</b>
-                <p className="meta mt0">計量に向けた水抜き・尿比重(HYDRO)のモニタリング。ここから開始・記録できます。</p>
-                <p className="small" style={{ marginBottom: 0, color: "var(--blue)" }}>水抜きを開く ›</p>
-              </Link>
-            </>
-          );
+          return null;
         })()}
 
         {/* 一般会員：パーソナルは「体験希望」ボタンだけ（プラン管理はしない） */}

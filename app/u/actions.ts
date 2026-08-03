@@ -341,10 +341,45 @@ export async function revertToLoadingAction(formData: FormData): Promise<void> {
   await assertOwner(formData, u);
   await mutateDb((d) => {
     const p = d.waterCutPeriods.find((x) => x.userId === u.id && x.status === "active" && x.cutStartedAt);
-    if (p) p.cutStartedAt = undefined;
+    if (p) {
+      p.cutStartedAt = undefined;
+      p.cutBaselineWeight = undefined;
+      p.weighInStartedAt = undefined;
+    }
   });
   await history(u.gymId, u.id, "watercut_revert_loading");
   redirect("/u/watercut");
+}
+
+export async function startWeighInPhaseAction(formData: FormData): Promise<void> {
+  const u = await mePro();
+  await assertOwner(formData, u);
+  await mutateDb((d) => {
+    const p = d.waterCutPeriods.find((x) => x.userId === u.id && x.status === "active");
+    if (p) p.weighInStartedAt = nowIso();
+  });
+  await history(u.gymId, u.id, "watercut_weighin_start");
+  redirect("/u/watercut");
+}
+
+export async function saveActualWeighInAction(formData: FormData): Promise<void> {
+  const u = await mePro();
+  await assertOwner(formData, u);
+  const weight = numOrU(formData, "actualWeighInWeight");
+  if (!validWeight(weight)) redirect("/u/watercut?error=weighin-weight");
+  let saved = false;
+  await mutateDb((d) => {
+    const p = d.waterCutPeriods.find((x) => x.userId === u.id && x.status === "active" && (x.weighInStartedAt || new Date(x.weighInDatetime).getTime() <= Date.now()));
+    if (!p) return;
+    p.actualWeighInWeight = weight;
+    p.weighedInAt = nowIso();
+    p.weighInStartedAt = p.weighInStartedAt ?? p.weighedInAt;
+    p.status = "recovery";
+    saved = true;
+  });
+  if (!saved) redirect("/u/watercut?error=weighin-weight");
+  await history(u.gymId, u.id, "watercut_weighin_weight");
+  redirect("/u/watercut?saved=weighin");
 }
 
 /** 進行中の水抜き開始体重を修正し、期間内の減少率を再計算する。 */
@@ -457,8 +492,8 @@ export async function saveWeighInRecoveryAction(formData: FormData): Promise<voi
   const u = await mePro();
   await assertOwner(formData, u);
   const db = await getDb();
-  const period = db.waterCutPeriods.find((p) => p.userId === u.id && p.status !== "done");
-  if (!period || Date.now() < new Date(period.weighInDatetime).getTime()) redirect("/u/watercut?error=recovery-time");
+  const period = db.waterCutPeriods.find((p) => p.userId === u.id && p.status === "recovery" && p.actualWeighInWeight != null);
+  if (!period) redirect("/u/watercut");
   const weighInWeight = numOrU(formData, "weighInWeight");
   const currentWeight = numOrU(formData, "current");
   const recordedAtRaw = str(formData, "recordedAt");

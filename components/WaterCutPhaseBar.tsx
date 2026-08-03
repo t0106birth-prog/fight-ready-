@@ -5,17 +5,16 @@ const PHASES: { key: string; label: string; icon: string }[] = [
   { key: "loading", label: "ローディング", icon: "🥤" },
   { key: "cut", label: "水抜き", icon: "💧" },
   { key: "weighin", label: "計量", icon: "⚖️" },
-  { key: "recovery", label: "リカバリー", icon: "🍚" },
 ];
 
-/** 計量準備の進行バー（ローディング→水抜き→計量→リカバリー）。今どこかを一目で示す。 */
+/** 計量までの進行バー（ローディング→水抜き→計量）。回復は計量後の別導線。 */
 export function WaterCutPhaseBar({ phase }: { phase: WaterCutPhase }) {
-  const curIdx = phase === "done" ? 3 : ["loading", "cut", "weighin", "recovery"].indexOf(phase);
+  const curIdx = phase === "done" || phase === "recovery" ? PHASES.length : ["loading", "cut", "weighin"].indexOf(phase);
   return (
     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", margin: "6px 0 10px" }}>
       {PHASES.map((p, i) => {
-        const done = phase === "done" || i < curIdx;
-        const cur = phase !== "done" && i === curIdx;
+        const done = phase === "done" || phase === "recovery" || i < curIdx;
+        const cur = phase !== "done" && phase !== "recovery" && i === curIdx;
         const color = cur ? "var(--blue)" : done ? "var(--green-bright)" : "var(--muted)";
         return (
           <Fragment key={p.key}>
@@ -31,7 +30,7 @@ export function WaterCutPhaseBar({ phase }: { phase: WaterCutPhase }) {
               </div>
             </div>
             {i < PHASES.length - 1 && (
-              <div style={{ flex: 1, height: 2, background: (phase === "done" || i < curIdx) ? "var(--green)" : "var(--line)", marginTop: 15 }} />
+              <div style={{ flex: 1, height: 2, background: (phase === "done" || phase === "recovery" || i < curIdx) ? "var(--green)" : "var(--line)", marginTop: 15 }} />
             )}
           </Fragment>
         );

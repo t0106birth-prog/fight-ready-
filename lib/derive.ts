@@ -80,9 +80,10 @@ export function activeWaterCut(db: DB, userId: string) {
 
 /** 計量準備のフェーズ。ローディング→水抜き→計量→リカバリー。 */
 export type WaterCutPhase = "loading" | "cut" | "weighin" | "recovery" | "done";
-export function waterCutPhase(period: { status: string; weighInDatetime: string; cutStartedAt?: string }): WaterCutPhase {
+export function waterCutPhase(period: { status: string; weighInDatetime: string; cutStartedAt?: string; weighInStartedAt?: string }): WaterCutPhase {
   if (period.status === "done") return "done";
   if (period.status === "recovery") return "recovery";
+  if (period.weighInStartedAt) return "weighin";
   if (new Date(period.weighInDatetime).getTime() <= Date.now()) return "weighin";
   return period.cutStartedAt ? "cut" : "loading";
 }

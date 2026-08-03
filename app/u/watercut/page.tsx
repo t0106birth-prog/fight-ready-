@@ -10,7 +10,7 @@ import { WaterCutGuide } from "@/components/WaterCutGuide";
 import { WaterCutPhaseBar } from "@/components/WaterCutPhaseBar";
 import { LineChart, type CPoint } from "@/components/Chart";
 import { OwnerField } from "@/components/OwnerField";
-import { finishWaterCutAction, startCutPhaseAction, revertToLoadingAction } from "@/app/u/actions";
+import { finishWaterCutAction, startCutPhaseAction, revertToLoadingAction, startWeighInPhaseAction, saveActualWeighInAction } from "@/app/u/actions";
 import { acuteLoss, acuteLossBand, hydroBand, oneHydroBand, oneReadyVerdict, waterCutTable } from "@/lib/judge";
 import { activeWaterCut, currentWeight, latestWaterCutLog, latestHydration, waterCutPhase } from "@/lib/derive";
 import { untilLabel, round1, fmtDateTime, hoursBetweenIso, signed, businessDate } from "@/lib/calc";
@@ -19,7 +19,7 @@ import { today } from "@/lib/store";
 const bandClass: Record<string, string> = { red: "alert-red", yellow: "alert-yellow", blue: "alert-blue", green: "alert-green" };
 
 const PHASE_GUIDE: Record<string, string> = {
-  loading: "水は多めに（目標まで）。食事は減量を進める。体重は一旦増えてOK。",
+  loading: "水分量・体重・体調の変化を記録し、異常があればスタッフへ伝えてください。",
   cut: "水を絞る時期。食事は少し戻してOK。体調を最優先に。",
   weighin: "計量おつかれさま。次はリカバリーです。",
   recovery: "計量後の回復を記録すると、この準備を終えられます。",
@@ -73,7 +73,9 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
   // 水抜き開始体重があればそれを基準に（ローディングで増えた"山"から水抜きの%を測る）
   const effBaseline = period.cutBaselineWeight ?? period.baselineWeight;
   const log = latestWaterCutLog(db, user.id, period.id);
-  const current = log?.currentWeight ?? effBaseline;
+  const current = period.status === "recovery" && period.actualWeighInWeight != null
+    ? period.actualWeighInWeight
+    : log?.currentWeight ?? effBaseline;
   const { kg, pct } = acuteLoss(effBaseline, current);
   const remain = round1(current - period.targetWeight);
   const todayWaterL = log?.waterIntakeLiters ?? null;
@@ -103,7 +105,7 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
     .sort((a, b) => (a.recordedDatetime < b.recordedDatetime ? 1 : -1));
   const latestHydrated = hydratedLogs[0];
 
-  const showRecovery = new Date(period.weighInDatetime).getTime() <= Date.now();
+  const showRecovery = period.status === "recovery";
 
   const logs = db.waterCutLogs
     .filter((l) => l.periodId === period.id)
@@ -140,20 +142,45 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
       <Hero title="計量準備" sub="ローディング→水抜き→計量→回復" backHref="/u/record" />
       <div className="shell">
         {sp.saved === "recovery" && <div className="alert-band alert-green"><b>✓</b> 計量後の回復を記録しました</div>}
+        {sp.saved === "weighin" && <div className="alert-band alert-green"><b>✓</b> 計量時の最終体重を記録しました</div>}
         {sp.saved === "baseline" && <div className="alert-band alert-green"><b>✓</b> 開始体重を更新し、減少率を再計算しました</div>}
         {sp.error === "current" && <div className="alert-band alert-red">現在体重を20〜300kgの範囲で入力してください。</div>}
         {sp.error === "cutbaseline" && <div className="alert-band alert-red">水抜き開始体重を20〜300kgの範囲で入力してください。</div>}
         {sp.error === "baseline" && <div className="alert-band alert-red">開始体重を正しく入力してください。</div>}
         {sp.error === "finish" && <div className="alert-band alert-yellow">回復記録と終了確認が必要です。試合終了後に保存してください。</div>}
         {sp.error === "recovery-time" && <div className="alert-band alert-red">計量日時より前に回復記録は保存できません。</div>}
+        {sp.error === "weighin-weight" && <div className="alert-band alert-red">計量時の最終体重を20〜300kgで入力してください。</div>}
 
         {/* 今どのフェーズか＋スキップ */}
         <WaterCutPhaseBar phase={phase} />
         {phase === "loading" && (
-          <form action={startCutPhaseAction} style={{ textAlign: "right", marginTop: -4, marginBottom: 8 }}>
+          <form action={startCutPhaseAction} style={{ marginTop: 4, marginBottom: 10 }}>
             <OwnerField id={user.id} />
             <input type="hidden" name="cutBaseline" value={round1(current)} />
-            <SubmitButton className="btn btn-ghost btn-sm" pendingLabel="…">ローディングをスキップ → 水抜きへ</SubmitButton>
+            <SubmitButton className="btn btn-ghost btn-sm" pendingLabel="…" style={{ width: "100%" }}>ローディングをスキップ → 水抜きへ</SubmitButton>
+          </form>
+        )}
+        {phase === "cut" && (
+          <div className="grid2" style={{ marginTop: 4, marginBottom: 10 }}>
+            <form action={revertToLoadingAction}>
+              <OwnerField id={user.id} />
+              <SubmitButton className="btn btn-ghost btn-sm" pendingLabel="戻しています…" style={{ width: "100%" }}>← ローディングに戻す</SubmitButton>
+            </form>
+            <form action={startWeighInPhaseAction}>
+              <OwnerField id={user.id} />
+              <SubmitButton className="btn btn-primary btn-sm" pendingLabel="進めています…" style={{ width: "100%" }}>計量までスキップ →</SubmitButton>
+            </form>
+          </div>
+        )}
+        {phase === "weighin" && period.status === "active" && (
+          <form action={saveActualWeighInAction} className="card tight" style={{ borderColor: "var(--blue)", marginTop: 6 }}>
+            <OwnerField id={user.id} />
+            <b>⚖️ 計量時の最終体重</b>
+            <p className="info-note mt0">公式計量で確定した数字を入力してください。保存すると計量後の回復記録へ進みます。</p>
+            <label className="fl" htmlFor="actualWeighInWeight">計量結果(kg)</label>
+            <input id="actualWeighInWeight" name="actualWeighInWeight" type="number" min="20" max="300" step="0.01" inputMode="decimal" defaultValue={period.actualWeighInWeight ?? round1(current)} required />
+            <div style={{ height: 8 }} />
+            <SubmitButton className="btn btn-primary" pendingLabel="保存しています…" style={{ width: "100%" }}>この体重で計量を確定する</SubmitButton>
           </form>
         )}
 
@@ -177,7 +204,7 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
             <div className="lbl" style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".06em", color: "var(--muted)" }}>水分ローディング（今日）</div>
             <div className="big-num" style={{ fontSize: 40, color: "#6bb0ff" }}>{todayWaterL ?? "—"}<span className="unit" style={{ fontSize: 15 }}>L</span></div>
             <div className="meta" style={{ fontSize: 12 }}>
-              {period.loadingTargetLiters ? `目標 ${period.loadingTargetLiters}L ／ ` : ""}現在 {round1(current)}kg（増えてOK）
+              {period.loadingTargetLiters ? `目標 ${period.loadingTargetLiters}L ／ ` : ""}現在 {round1(current)}kg
             </div>
           </div>
         ) : (
@@ -287,14 +314,6 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
           </form>
         )}
 
-        {/* 間違えて水抜きへ進んだ時の修正（記録は消えない） */}
-        {phase === "cut" && (
-          <form action={revertToLoadingAction}>
-            <OwnerField id={user.id} />
-            <SubmitButton className="btn btn-ghost btn-sm" pendingLabel="戻しています…" style={{ width: "100%" }}>← ローディングに戻す（間違えて進んだ場合・記録は残ります）</SubmitButton>
-          </form>
-        )}
-
         {/* ONE Championship：尿比重(ハイドレーション)が主役なので主画面に出す */}
         {isOne && (
           <div className="card" style={{ borderColor: "var(--blue)" }}>
@@ -354,10 +373,12 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
               <tbody>
                 <tr style={band.level === "blue" ? { outline: "2px solid var(--blue)" } : undefined}><td className="k" style={{ color: "#6bb0ff" }}>0〜2%未満</td><td>参考範囲</td></tr>
                 <tr style={band.level === "yellow" ? { outline: "2px solid var(--amber)" } : undefined}><td className="k" style={{ color: "var(--amber-ink)" }}>2〜5%未満</td><td>注意</td></tr>
-                <tr style={band.level === "red" ? { outline: "2px solid var(--red)" } : undefined}><td className="k" style={{ color: "var(--red-bright)" }}>5%以上</td><td>危険（専門家の確認を推奨）</td></tr>
+                <tr style={band.level === "red" && pct < 6 ? { outline: "2px solid var(--red)" } : undefined}><td className="k" style={{ color: "var(--red-bright)" }}>5〜6%未満</td><td>危険域（これ以上進める前に専門家へ確認）</td></tr>
+                <tr style={band.level === "red" && pct >= 6 && pct < 7 ? { outline: "2px solid var(--red)" } : undefined}><td className="k" style={{ color: "var(--red-bright)" }}>6〜7%未満</td><td>危険度がさらに高い</td></tr>
+                <tr style={band.level === "red" && pct >= 7 ? { outline: "2px solid var(--red)" } : undefined}><td className="k" style={{ color: "var(--red-bright)" }}>7%以上</td><td>極めて高い危険域</td></tr>
               </tbody>
             </table>
-            <p className="info-note">症状があるときは率に関わらず「危険（赤）」。これは監視の目安で、安全な水抜き量を示すものではありません。</p>
+            <p className="info-note"><b>5%以上はすべて危険域です。</b> 6%・7%は「場合によって安全」という意味ではなく、危険度の上昇を見落とさないための参考表示です。症状があるときは率に関わらず危険（赤）。これは安全な水抜き量を示すものではありません。</p>
 
             {showHydro && (
               <>

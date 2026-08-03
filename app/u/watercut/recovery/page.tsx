@@ -14,13 +14,13 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
   const db = await getDb();
   const period = activeWaterCut(db, user.id);
   if (!period) redirect("/u/history");
-  if (Date.now() < new Date(period.weighInDatetime).getTime()) redirect("/u/watercut?error=recovery-time");
+  if (period.status !== "recovery" || period.actualWeighInWeight == null) redirect("/u/watercut");
 
   // 計量後の記録を時系列で（体重の戻りが見える）
   const recs = db.weighInRecoveries
     .filter((r) => r.userId === user.id && r.periodId === period.id)
     .sort((a, b) => ((a.recordedAt ?? a.createdAt) < (b.recordedAt ?? b.createdAt) ? 1 : -1));
-  const weighInWeight = period.actualWeighInWeight ?? recs[0]?.weighInWeight ?? period.targetWeight;
+  const weighInWeight = period.actualWeighInWeight;
   const fightDay = recs.find((r) => r.isFightDay);
   // 計量からの戻り率（％）。※「高い＝良い」ではなく、水抜き幅の大きさ＝体への負担の目安として観察する。
   const recPct = (r: { currentWeight: number; weighInWeight?: number }) =>
@@ -54,7 +54,7 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
         <RecoveryQuickForm
           ownerId={user.id}
           weighInWeight={weighInWeight}
-          weighInLocked={period.actualWeighInWeight != null}
+          weighInLocked
           defaultRecordedAt={toDateTimeLocal()}
         />
 

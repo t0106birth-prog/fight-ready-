@@ -153,7 +153,7 @@ export function WaterCutLogForm({ ownerId, defaultWeight, phase, loadingTarget }
         />
         <span aria-hidden="true">kg</span>
       </div>
-      <p id="currentWeightHelp" className="info-note">{loading ? "ローディング中は体重が一旦増えてOK（水を溜めている証拠）。" : "体重計の数値を小数第1位まで。"}</p>
+      <p id="currentWeightHelp" className="info-note">{loading ? "体重と体調の変化を記録してください。" : "体重計の数値を小数第1位まで。"}</p>
 
       <label className="fl" htmlFor="waterIntake">
         今日の水分量（L）{loading && loadingTarget ? <span className="meta"> 目標 {loadingTarget}L</span> : null}
