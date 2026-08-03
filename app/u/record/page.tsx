@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getDb } from "@/lib/store";
 import { UserTabbar, Hero } from "@/components/Nav";
-import { activeWaterCut, todosDone, inWaterCutWindow, waterCutPhase } from "@/lib/derive";
-import { fmtDate, businessDate } from "@/lib/calc";
+import { activeWaterCut, todosDone, inWaterCutWindow, waterCutPhase, latestWaterCutLog } from "@/lib/derive";
+import { businessDate, untilLabel } from "@/lib/calc";
+import { acuteLoss } from "@/lib/judge";
 
 const PHASE_LABEL: Record<string, string> = { loading: "ローディング期", cut: "水抜き期", weighin: "計量", recovery: "リカバリー", done: "" };
 
@@ -36,7 +37,6 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
       done: todos.morning,
     },
     { href: "/u/record/activity", ico: "🥊", label: "運動・休養の記録", desc: "練習した日も、しなかった日（休養日）も", done: todos.activity },
-    { href: "/u/record/running", ico: "🏃", label: "ランニング記録", desc: "時間・カテゴリー・ダッシュ本数", done: todos.running },
     { href: "/u/record/nutrition", ico: "🍽️", label: "食事達成度", desc: "今日の食事目標", done: todos.nutrition },
     { href: "/u/record/rest", ico: "🌙", label: "夜の回復チェック", desc: "一日の終わりに回復・痛みの変化を確認", done: todos.night },
   ];
@@ -72,27 +72,42 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
           </>
         ) : (
         <>
+        <p className="kicker">今日の記録</p>
         {items.map((it) => (
           <Link key={it.href} href={it.href} className={`todo-item ${it.done ? "done" : ""}`}>
             <span className="tk" style={{ fontSize: 18 }}>{it.done ? "✓" : it.ico}</span>
             <span className="tt">{it.label}<br /><span className="meta" style={{ fontWeight: 400 }}>{it.desc}</span></span>
-            <span className="ta">›</span>
+            <span className={`sig ${it.done ? "sig-green" : "sig-blue"}`}>{it.done ? "完了" : "未記録"}</span>
           </Link>
         ))}
+        <Link href="/u/record/running" className="btn btn-ghost" style={{ margin: "2px 0 14px" }}>
+          🏃 ランニングの詳細を記録
+        </Link>
         {/* 水抜きはプロ選手なら常に開ける（7日前からは自動で強調表示） */}
         {isPro && (
           <>
-            <Link href="/u/watercut" className="todo-item" style={{ borderColor: (waterCut || inWaterCutWindow(user)) ? "var(--red)" : "var(--blue)" }}>
-              <span className="tk" style={{ fontSize: 18 }}>💧</span>
-              <span className="tt">
-                {waterCut ? <>計量準備：<b style={{ color: "var(--red-bright)" }}>{PHASE_LABEL[waterCutPhase(waterCut)]}</b><span className="meta"> ・今ここ</span></> : "試合の計量準備"}<br />
-                <span className="meta" style={{ fontWeight: 400 }}>
-                  ローディング → 水抜き → 計量 → リカバリー<br />
-                  {waterCut ? "押して続きを記録" : "ローディング・水抜きを開始するにはここをタップ"}
-                </span>
-              </span>
-              <span className="ta">›</span>
-            </Link>
+            <p className="kicker">計量準備</p>
+            {waterCut ? (() => {
+              const log = latestWaterCutLog(db, user.id, waterCut.id);
+              const current = log?.currentWeight ?? waterCut.baselineWeight;
+              const { pct } = acuteLoss(waterCut.baselineWeight, current);
+              const borderColor = pct >= 5 ? "var(--red)" : pct >= 2 ? "var(--amber)" : "var(--blue)";
+              return (
+                <Link href="/u/watercut" className="card" style={{ display: "block", color: "var(--ink)", borderColor, padding: "14px 16px" }}>
+                  <div className="row" style={{ alignItems: "center" }}>
+                    <div>
+                      <b>{PHASE_LABEL[waterCutPhase(waterCut)]}</b>
+                      <p className="small" style={{ margin: "5px 0 0" }}>計量まで {untilLabel(waterCut.weighInDatetime)} ・ 開始から −{pct}%</p>
+                    </div>
+                    <span className="ta">›</span>
+                  </div>
+                </Link>
+              );
+            })() : (
+              <Link href="/u/watercut" className={inWaterCutWindow(user) ? "btn btn-accent" : "btn btn-ghost"}>
+                💧 計量準備を始める
+              </Link>
+            )}
             {/* 計量後のリカバリー体重（準備中は常に表示。計量日を過ぎたら入力可） */}
             {waterCut && (() => {
               const weighInPassed = new Date(waterCut.weighInDatetime).getTime() <= Date.now();
@@ -105,19 +120,9 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
                   </Link>
                 );
               }
-              return (
-                <div className="todo-item" style={{ opacity: 0.55, cursor: "default" }}>
-                  <span className="tk" style={{ fontSize: 18 }}>🥊</span>
-                  <span className="tt">計量後のリカバリー<br /><span className="meta" style={{ fontWeight: 400 }}>計量日（{fmtDate(waterCut.weighInDatetime)}）を過ぎたら記録してください</span></span>
-                  <span className="ta">🔒</span>
-                </div>
-              );
+              return null;
             })()}
-            <Link href="/u/history" className="todo-item">
-              <span className="tk" style={{ fontSize: 18 }}>📚</span>
-              <span className="tt">過去の水抜き・試合準備<br /><span className="meta" style={{ fontWeight: 400 }}>これまでの準備を見返す</span></span>
-              <span className="ta">›</span>
-            </Link>
+            <Link href="/u/history" className="small" style={{ display: "block", marginTop: 12 }}>過去の計量準備を見る ›</Link>
           </>
         )}
         </>
