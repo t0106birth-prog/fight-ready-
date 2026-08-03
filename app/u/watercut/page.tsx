@@ -8,6 +8,7 @@ import { StatusTile } from "@/components/StatusTile";
 import { SubmitButton } from "@/components/SubmitButton";
 import { WaterCutGuide } from "@/components/WaterCutGuide";
 import { WaterCutPhaseBar } from "@/components/WaterCutPhaseBar";
+import { LineChart, type CPoint } from "@/components/Chart";
 import { OwnerField } from "@/components/OwnerField";
 import { finishWaterCutAction, startCutPhaseAction, revertToLoadingAction } from "@/app/u/actions";
 import { acuteLoss, acuteLossBand, hydroBand, oneHydroBand, oneReadyVerdict, waterCutTable } from "@/lib/judge";
@@ -108,6 +109,12 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
     .filter((l) => l.periodId === period.id)
     .sort((a, b) => (a.recordedDatetime < b.recordedDatetime ? -1 : 1));
   const waterLogs = logs.filter((l) => l.waterIntakeLiters != null);
+  // 体重の推移グラフ（開始体重＝ローディング開始点から、水抜きまで通しで）。帯＝水抜き期間。
+  const chartPoints: CPoint[] = [
+    { d: period.startDatetime, y: round1(period.baselineWeight) },
+    ...logs.map((l) => ({ d: l.recordedDatetime, y: round1(l.currentWeight) })),
+  ];
+  const chartBand = period.cutStartedAt ? { from: period.cutStartedAt, to: period.weighInDatetime } : null;
   const paceRows = logs.map((l, i) => {
     const prevAt = i > 0 ? logs[i - 1].recordedDatetime : period.startDatetime;
     const stepLoss = round1((i > 0 ? logs[i - 1].currentWeight : period.baselineWeight) - l.currentWeight);
@@ -203,6 +210,38 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* 体重の推移グラフ（ローディング〜水抜き通し・帯＝水抜き期間） */}
+            {chartPoints.length >= 2 && (
+              <div className="card">
+                <b>体重の推移（ローディング〜水抜き）</b>
+                <p className="info-note mt0">薄い帯の部分が「水抜き」期間です。ローディングで上がり、水抜きで下がる流れが見えます。</p>
+                <LineChart points={chartPoints} hLine={{ y: period.targetWeight, label: `目標 ${period.targetWeight}kg` }} band={chartBand} height={180} />
+              </div>
+            )}
+
+            {/* ローディング水分量の目安（参考） */}
+            {phase === "loading" && (
+              <details className="card tight">
+                <summary><b>水分量の目安（参考）</b></summary>
+                <div style={{ marginTop: 8 }}>
+                  <p className="meta mt0">一般的なウォーターローディングは <b>体重×約60〜100mL/日</b> が目安とされます（参考であり、飲む量の指示ではありません）。</p>
+                  <table className="reftable">
+                    <thead><tr><th>体重</th><th>目安/日（約）</th></tr></thead>
+                    <tbody>
+                      <tr style={{ outline: "2px solid var(--blue)" }}>
+                        <td className="k">あなた {round1(effBaseline)}kg</td>
+                        <td><b>{round1(effBaseline * 0.06)}〜{round1(effBaseline * 0.1)}L</b></td>
+                      </tr>
+                      {[60, 70, 80, 90].map((w) => (
+                        <tr key={w}><td className="k">{w}kg</td><td>{round1(w * 0.06)}〜{round1(w * 0.1)}L</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="info-note">大量に飲むときは<b>電解質も一緒に</b>。体調（頭痛・吐き気・むくみ等）を最優先に、無理はしないでください。</p>
+                </div>
+              </details>
             )}
           </>
         )}
