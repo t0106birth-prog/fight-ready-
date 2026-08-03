@@ -5,13 +5,13 @@ import { sportLabel } from "@/lib/constants";
 import { dailyVerdict } from "@/lib/judge";
 import { fmtDateTime } from "@/lib/calc";
 import { SigBadge } from "@/components/SigBadge";
-import { hqVerifyAction, hqLogoutAction, hqResetPasswordAction, hqToggleGymAction } from "./actions";
+import { hqVerifyAction, hqLogoutAction, hqResetPasswordAction, hqToggleGymAction, hqDeleteGymAction } from "./actions";
 import { SubmitButton } from "@/components/SubmitButton";
 
 /**
  * 本部（HQ）管理ページ。暗証番号で解錠すると、全ジムと利用者の紐づけ一覧＋選手の中身を閲覧できる（簡易版）。
  */
-export default async function HqPage({ searchParams }: { searchParams: Promise<{ e?: string; pw?: string }> }) {
+export default async function HqPage({ searchParams }: { searchParams: Promise<{ e?: string; pw?: string; gymdel?: string }> }) {
   const sp = await searchParams;
   const unlocked = await hasUnlock("fr_hq");
   const db = unlocked ? await getDb() : null;
@@ -43,6 +43,8 @@ export default async function HqPage({ searchParams }: { searchParams: Promise<{
       {unlocked ? (
         <>
           <div className="alert-band alert-green" style={{ marginTop: 12 }}><b>🔓 解錠しました</b> — 本部管理ページ</div>
+          {sp.gymdel === "1" && <div className="alert-band alert-green">ジムを削除しました。</div>}
+          {sp.gymdel === "blocked" && <div className="alert-band alert-yellow">選手・会員が紐付いているジムは削除できません。先に別ジムへ移すか無所属にしてください。</div>}
 
           {/* 全体サマリ */}
           <p className="kicker">全体</p>
@@ -84,12 +86,20 @@ export default async function HqPage({ searchParams }: { searchParams: Promise<{
                   <p className="meta mt0">
                     選手 {athletes.filter((u) => u.role === "pro").length} / 一般 {athletes.filter((u) => u.role === "member").length} ／ スタッフ {staffs.length}
                   </p>
-                  <form action={hqToggleGymAction}>
-                    <input type="hidden" name="gymId" value={g.id} />
-                    <SubmitButton className={`btn-sm ${g.suspended ? "btn-green" : "btn-dark"}`} pendingLabel="…">
-                      {g.suspended ? "再開する" : "停止する"}
-                    </SubmitButton>
-                  </form>
+                  <span style={{ display: "flex", gap: 6, flex: "none" }}>
+                    <form action={hqToggleGymAction}>
+                      <input type="hidden" name="gymId" value={g.id} />
+                      <SubmitButton className={`btn-sm ${g.suspended ? "btn-green" : "btn-dark"}`} pendingLabel="…">
+                        {g.suspended ? "再開する" : "停止する"}
+                      </SubmitButton>
+                    </form>
+                    {athletes.length === 0 && (
+                      <form action={hqDeleteGymAction}>
+                        <input type="hidden" name="gymId" value={g.id} />
+                        <SubmitButton className="btn-sm btn-accent" pendingLabel="…">削除</SubmitButton>
+                      </form>
+                    )}
+                  </span>
                 </div>
                 {athletes.map((u) => (
                   <Link key={u.id} href={`/hq/user/${u.id}`} className="progress-row" style={{ textDecoration: "none", color: "var(--ink)", borderTop: "1px solid var(--line)" }}>

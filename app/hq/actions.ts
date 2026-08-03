@@ -40,6 +40,25 @@ export async function hqLinkGymAction(formData: FormData): Promise<void> {
   redirect(`/hq/user/${userId}?linked=1`);
 }
 
+/**
+ * 本部からジムを削除する（課金前に勝手に作られた不要ジムの掃除用）。HQ解錠必須。
+ * 安全策：選手・会員が1人でも紐付いているジムは削除しない（先に紐付けを外す/移す必要がある）。
+ * 削除時はそのジムのスタッフアカウントも一緒に削除する。
+ */
+export async function hqDeleteGymAction(formData: FormData): Promise<void> {
+  if (!(await hasUnlock("fr_hq"))) redirect("/hq");
+  const gymId = String(formData.get("gymId") || "");
+  const db = await getDb();
+  const hasAthletes = db.users.some((u) => u.gymId === gymId && u.status === "active" && (u.role === "pro" || u.role === "member"));
+  if (!gymId || hasAthletes) redirect("/hq?gymdel=blocked");
+  await mutateDb((d) => {
+    d.gyms = d.gyms.filter((g) => g.id !== gymId);
+    d.users = d.users.filter((u) => !(u.gymId === gymId && u.role === "staff"));
+  });
+  await history(gymId, undefined, "hq_delete_gym");
+  redirect("/hq?gymdel=1");
+}
+
 /** 本部からジムを停止/再開する（停止中はそのコードでの新規登録・参加を拒否）。HQ解錠必須。 */
 export async function hqToggleGymAction(formData: FormData): Promise<void> {
   if (!(await hasUnlock("fr_hq"))) redirect("/hq");
