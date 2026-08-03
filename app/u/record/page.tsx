@@ -85,9 +85,10 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
             <Link href="/u/watercut" className="todo-item" style={{ borderColor: (waterCut || inWaterCutWindow(user)) ? "var(--red)" : "var(--blue)" }}>
               <span className="tk" style={{ fontSize: 18 }}>💧</span>
               <span className="tt">
-                {waterCut ? <>計量準備：<b style={{ color: "var(--red-bright)" }}>{PHASE_LABEL[waterCutPhase(waterCut)]}</b><span className="meta"> ・今ここ</span></> : "試合の計量準備（ウォーターローディング〜）"}<br />
+                {waterCut ? <>計量準備：<b style={{ color: "var(--red-bright)" }}>{PHASE_LABEL[waterCutPhase(waterCut)]}</b><span className="meta"> ・今ここ</span></> : "試合の計量準備"}<br />
                 <span className="meta" style={{ fontWeight: 400 }}>
-                  {waterCut ? "ローディング→水抜き→計量→リカバリー。押して続きを記録" : inWaterCutWindow(user) ? "計量が近づいています。ここから始められます" : "ウォーターローディングから始める（試合前の計量に向けて）"}
+                  ローディング → 水抜き → 計量 → リカバリー<br />
+                  {waterCut ? "押して続きを記録" : "ローディング・水抜きを開始するにはここをタップ"}
                 </span>
               </span>
               <span className="ta">›</span>

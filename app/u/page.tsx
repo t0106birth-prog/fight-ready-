@@ -100,15 +100,24 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
               </p>
             </div>
 
-            {/* 13-2 今日やること */}
-            <p className="kicker">今日やること</p>
-            {todoList.map((t) => (
-              <Link key={t.key} href={t.href} className={`todo-item ${t.done ? "done" : ""}`}>
-                <span className="tk">{t.done ? "✓" : ""}</span>
-                <span className="tt">{t.label}</span>
-                <span className="ta">›</span>
-              </Link>
-            ))}
+            {/* 13-2 今日の記録（ホームはサマリーだけ。入力は「記録」タブへ集約して差別化） */}
+            <p className="kicker">今日の記録</p>
+            <Link href="/u/record" className="card" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
+              <div className="row">
+                <b>{todoList.filter((t) => t.done).length}/{todoList.length} 完了</b>
+                <span className="btn btn-primary btn-sm">記録する →</span>
+              </div>
+              <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                {todoList.map((t) => (
+                  <span key={t.key} title={t.label} style={{ flex: 1, height: 6, borderRadius: 3, background: t.done ? "var(--green)" : "var(--line)" }} />
+                ))}
+              </div>
+              <p className="meta" style={{ margin: "8px 0 0" }}>
+                {todoList.every((t) => t.done)
+                  ? "今日の記録は完了です。おつかれさまでした。"
+                  : `残り：${todoList.filter((t) => !t.done).map((t) => t.label).join("・")}`}
+              </p>
+            </Link>
           </>
         )}
 
