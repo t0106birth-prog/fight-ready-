@@ -4,10 +4,10 @@ import { hasUnlock } from "@/lib/unlock";
 import { getDb } from "@/lib/store";
 import { StatusTile } from "@/components/StatusTile";
 import { SigBadge } from "@/components/SigBadge";
-import { statusTiles } from "@/lib/derive";
-import { dailyVerdict } from "@/lib/judge";
+import { statusTiles, activeWaterCut, latestWaterCutLog, latestHydration } from "@/lib/derive";
+import { dailyVerdict, acuteLoss } from "@/lib/judge";
 import { sportLabel, LV3, SLUGGISH } from "@/lib/constants";
-import { fmtDate, ageFrom } from "@/lib/calc";
+import { fmtDate, ageFrom, untilLabel, round1 } from "@/lib/calc";
 
 /**
  * 本部（HQ）用の利用者詳細（全ジム横断・読み取り専用）。
@@ -23,6 +23,14 @@ export default async function HqUserDetail({ params }: { params: Promise<{ id: s
 
   const tiles = statusTiles(db, user);
   const verdict = dailyVerdict(db, user);
+
+  // 水抜きの詳細（選手で進行中の期間があるとき）
+  const wc = user.role === "pro" ? activeWaterCut(db, user.id) : null;
+  const wcLog = wc ? latestWaterCutLog(db, user.id, wc.id) : null;
+  const wcCur = wc ? (wcLog?.currentWeight ?? wc.baselineWeight) : null;
+  const wcPct = wc && wcCur != null ? acuteLoss(wc.baselineWeight, wcCur).pct : null;
+  const wcRem = wc && wcCur != null ? round1(wcCur - wc.targetWeight) : null;
+  const wcHyd = wc ? latestHydration(db, user.id, wc.id) : null;
   const checks = db.dailyCheckins.filter((c) => c.userId === id).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 7);
   const acts = [
     ...db.activityLogs.filter((a) => a.userId === id).map((a) => ({ d: a.date, t: a.activityType, m: a.durationMinutes })),
@@ -48,6 +56,22 @@ export default async function HqUserDetail({ params }: { params: Promise<{ id: s
 
       <p className="kicker">今日の状態</p>
       <div className="status-grid">{tiles.map((t) => <StatusTile key={t.lbl} tile={t} />)}</div>
+
+      {wc && wcCur != null && (
+        <>
+          <p className="kicker">水抜きの状況</p>
+          <div className="card" style={{ borderColor: "var(--blue)" }}>
+            <div className="row"><b>WATER CUT / HYDRO</b><span className={`sig sig-${(wcPct ?? 0) >= 5 ? "red" : (wcPct ?? 0) >= 2 ? "yellow" : "blue"}`}>開始から −{wcPct}%</span></div>
+            <div className="progress-row"><span>現在体重</span><b>{wcCur}<span className="unit">kg</span></b></div>
+            <div className="progress-row"><span>開始体重 → 計量目標</span><b>{wc.baselineWeight}kg → {wc.targetWeight}kg</b></div>
+            <div className="progress-row"><span>計量まで残り</span><b>あと {(wcRem ?? 0) > 0 ? wcRem : 0}<span className="unit">kg</span></b></div>
+            <div className="progress-row"><span>計量まで</span><b>{untilLabel(wc.weighInDatetime)}</b></div>
+            {wcHyd?.urineSpecificGravity != null && (
+              <div className="progress-row"><span>HYDRO（尿比重）</span><b>{wcHyd.urineSpecificGravity.toFixed(3)}</b></div>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="grid2" style={{ marginTop: 8 }}>
         <div className="card tight">

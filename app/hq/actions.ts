@@ -22,6 +22,17 @@ export async function hqLogoutAction(): Promise<void> {
   redirect("/");
 }
 
+/** 本部からジムを停止/再開する（停止中はそのコードでの新規登録・参加を拒否）。HQ解錠必須。 */
+export async function hqToggleGymAction(formData: FormData): Promise<void> {
+  if (!(await hasUnlock("fr_hq"))) redirect("/hq");
+  const gymId = String(formData.get("gymId") || "");
+  await mutateDb((d) => {
+    const g = d.gyms.find((x) => x.id === gymId);
+    if (g) g.suspended = !g.suspended;
+  });
+  redirect("/hq");
+}
+
 /**
  * 本部から、メールアドレス指定で任意アカウント（スタッフ含む）のパスワードを再設定する。
  * スタッフが自分のパスワードを忘れたときの最終手段。HQ解錠済みが必須。
