@@ -314,15 +314,29 @@ export async function startWaterCutAction(formData: FormData): Promise<void> {
   redirect("/u/watercut");
 }
 
-/** ローディング→水抜きへフェーズを進める（本人が実際に水を絞り始めるタイミングで押す）。 */
+/** ローディング→水抜きへフェーズを進める。水抜き開始時の体重（ローディングで増えた"山"）を改めて記録する。 */
 export async function startCutPhaseAction(formData: FormData): Promise<void> {
   const u = await mePro();
   await assertOwner(formData, u);
+  const cutBaseline = numOrU(formData, "cutBaseline");
+  if (!validWeight(cutBaseline)) redirect("/u/watercut?error=cutbaseline");
   await mutateDb((d) => {
     const p = d.waterCutPeriods.find((x) => x.userId === u.id && x.status === "active" && !x.cutStartedAt);
-    if (p) p.cutStartedAt = nowIso();
+    if (p) { p.cutStartedAt = nowIso(); p.cutBaselineWeight = cutBaseline!; }
   });
   await history(u.gymId, u.id, "watercut_cut_start");
+  redirect("/u/watercut");
+}
+
+/** 水抜き→ローディングへ戻す（間違えて進めた時の修正）。記録は消さず、フェーズだけ戻す。 */
+export async function revertToLoadingAction(formData: FormData): Promise<void> {
+  const u = await mePro();
+  await assertOwner(formData, u);
+  await mutateDb((d) => {
+    const p = d.waterCutPeriods.find((x) => x.userId === u.id && x.status === "active" && x.cutStartedAt);
+    if (p) p.cutStartedAt = undefined;
+  });
+  await history(u.gymId, u.id, "watercut_revert_loading");
   redirect("/u/watercut");
 }
 
@@ -385,7 +399,9 @@ export async function saveWaterCutLogAction(formData: FormData): Promise<void> {
   if (!period) redirect("/u/watercut");
   const current = numOrU(formData, "current");
   if (!validWeight(current)) redirect("/u/watercut?error=current");
-  const { kg, pct } = acuteLoss(period!.baselineWeight, current!);
+  // 水抜き開始体重(cutBaselineWeight)があればそこから、なければローディング開始体重から%を測る
+  const base = period!.cutBaselineWeight ?? period!.baselineWeight;
+  const { kg, pct } = acuteLoss(base, current!);
   const waterIntakeLiters = numOrU(formData, "waterIntake");
   const log: WaterCutLog = {
     id: uid(), gymId: u.gymId, userId: u.id, periodId: period!.id,

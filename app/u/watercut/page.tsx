@@ -9,7 +9,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { WaterCutGuide } from "@/components/WaterCutGuide";
 import { WaterCutPhaseBar } from "@/components/WaterCutPhaseBar";
 import { OwnerField } from "@/components/OwnerField";
-import { finishWaterCutAction, startCutPhaseAction } from "@/app/u/actions";
+import { finishWaterCutAction, startCutPhaseAction, revertToLoadingAction } from "@/app/u/actions";
 import { acuteLoss, acuteLossBand, hydroBand, oneHydroBand, oneReadyVerdict, waterCutTable } from "@/lib/judge";
 import { activeWaterCut, currentWeight, latestWaterCutLog, latestHydration, waterCutPhase } from "@/lib/derive";
 import { untilLabel, round1, fmtDateTime, hoursBetweenIso, signed, businessDate } from "@/lib/calc";
@@ -69,9 +69,11 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
 
   // ── 進行中：フェーズ本体 ──
   const phase = waterCutPhase(period);
+  // 水抜き開始体重があればそれを基準に（ローディングで増えた"山"から水抜きの%を測る）
+  const effBaseline = period.cutBaselineWeight ?? period.baselineWeight;
   const log = latestWaterCutLog(db, user.id, period.id);
-  const current = log?.currentWeight ?? period.baselineWeight;
-  const { kg, pct } = acuteLoss(period.baselineWeight, current);
+  const current = log?.currentWeight ?? effBaseline;
+  const { kg, pct } = acuteLoss(effBaseline, current);
   const remain = round1(current - period.targetWeight);
   const todayWaterL = log?.waterIntakeLiters ?? null;
 
@@ -84,8 +86,8 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
   const band = acuteLossBand(pct, hasSymptom);
   const hb = hydroBand(hydro?.urineSpecificGravity);
   const oneBand = isOne ? oneHydroBand(hydro?.urineSpecificGravity) : null;
-  const table = waterCutTable(period.baselineWeight);
-  const plannedLoss = acuteLoss(period.baselineWeight, period.targetWeight);
+  const table = waterCutTable(effBaseline);
+  const plannedLoss = acuteLoss(effBaseline, period.targetWeight);
   const lossPctLabel = pct > 0 ? `−${pct}%` : pct < 0 ? `+${Math.abs(pct)}%` : "±0%";
   const lossKgLabel = kg > 0 ? `−${kg}kg` : kg < 0 ? `+${Math.abs(kg)}kg` : "±0kg";
   const hydroTone = hb?.level ?? "blue";
@@ -133,6 +135,7 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
         {sp.saved === "recovery" && <div className="alert-band alert-green"><b>✓</b> 計量後の回復を記録しました</div>}
         {sp.saved === "baseline" && <div className="alert-band alert-green"><b>✓</b> 開始体重を更新し、減少率を再計算しました</div>}
         {sp.error === "current" && <div className="alert-band alert-red">現在体重を20〜300kgの範囲で入力してください。</div>}
+        {sp.error === "cutbaseline" && <div className="alert-band alert-red">水抜き開始体重を20〜300kgの範囲で入力してください。</div>}
         {sp.error === "baseline" && <div className="alert-band alert-red">開始体重を正しく入力してください。</div>}
         {sp.error === "finish" && <div className="alert-band alert-yellow">回復記録と終了確認が必要です。試合終了後に保存してください。</div>}
         {sp.error === "recovery-time" && <div className="alert-band alert-red">計量日時より前に回復記録は保存できません。</div>}
@@ -176,7 +179,7 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
           <StatusTile tile={{ lbl: "開始から", val: lossPctLabel, tone: bandTone }} />
           {showHydro
             ? <StatusTile tile={{ lbl: "HYDRO", val: hydro?.urineSpecificGravity?.toFixed(isOne ? 4 : 3) ?? "未測定", tone: hydroTone }} />
-            : <StatusTile tile={{ lbl: "開始体重", val: `${period.baselineWeight}kg`, tone: "blue" }} />}
+            : <StatusTile tile={{ lbl: phase === "cut" ? "水抜き開始" : "開始体重", val: `${effBaseline}kg`, tone: "blue" }} />}
           <StatusTile tile={{ lbl: "計量まで", val: untilLabel(period.weighInDatetime), tone: "blue" }} />
         </div>
 
@@ -204,11 +207,24 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
           </>
         )}
 
-        {/* フェーズを進める：ローディング→水抜き */}
+        {/* フェーズを進める：ローディング→水抜き。ここで"水抜き開始体重"を改めて記録する */}
         {phase === "loading" && (
-          <form action={startCutPhaseAction}>
+          <form action={startCutPhaseAction} className="card tight" style={{ borderColor: "var(--blue)" }}>
             <OwnerField id={user.id} />
-            <SubmitButton className="btn btn-primary" pendingLabel="切替中…" style={{ width: "100%" }}>💧 水を絞る「水抜き」へ進む</SubmitButton>
+            <b>💧 水抜きを開始する</b>
+            <p className="info-note mt0">ローディングを終えて水を絞り始めるとき。<b>いまの体重</b>を入れて開始します（この体重を基準に水抜きの%を測ります）。</p>
+            <label className="fl" htmlFor="cutBaseline">水抜き開始体重(kg)</label>
+            <input id="cutBaseline" name="cutBaseline" type="number" min="20" max="300" step="0.1" inputMode="decimal" defaultValue={round1(current)} required />
+            <div style={{ height: 8 }} />
+            <SubmitButton className="btn btn-primary" pendingLabel="開始中…" style={{ width: "100%" }}>この体重で「水抜き」へ進む</SubmitButton>
+          </form>
+        )}
+
+        {/* 間違えて水抜きへ進んだ時の修正（記録は消えない） */}
+        {phase === "cut" && (
+          <form action={revertToLoadingAction}>
+            <OwnerField id={user.id} />
+            <SubmitButton className="btn btn-ghost btn-sm" pendingLabel="戻しています…" style={{ width: "100%" }}>← ローディングに戻す（間違えて進んだ場合・記録は残ります）</SubmitButton>
           </form>
         )}
 
@@ -249,7 +265,7 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
             </table>
             <p className="info-note">症状があるときは率に関わらず「危険（赤）」。これは監視の目安で、安全な水抜き量を示すものではありません。</p>
 
-            <p className="kicker">水抜き早見表（開始 {period.baselineWeight}kg 基準）</p>
+            <p className="kicker">水抜き早見表（{phase === "cut" ? "水抜き開始" : "開始"} {effBaseline}kg 基準）</p>
             <table className="reftable">
               <thead><tr><th>開始から</th><th>減少量</th><th>体重</th></tr></thead>
               <tbody>
