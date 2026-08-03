@@ -33,6 +33,7 @@
     "**/*.tsx",
     ".next-build/types/**/*.ts",
     ".next-verify-agent/types/**/*.ts",
+    ".next-verify-agent2/types/**/*.ts",
     ".next-verify/types/**/*.ts",
     ".next-verify10/types/**/*.ts",
     ".next-verify11/types/**/*.ts",
@@ -40,6 +41,7 @@
     ".next-verify13/types/**/*.ts",
     ".next-verify14/types/**/*.ts",
     ".next-verify15/types/**/*.ts",
+    ".next-verify16/types/**/*.ts",
     ".next-verify2/types/**/*.ts",
     ".next-verify3/types/**/*.ts",
     ".next-verify4/types/**/*.ts",
@@ -50,7 +52,7 @@
     ".next-verify9/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts",
-    ".next-verify16/types/**/*.ts"
+    ".next-verify17/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

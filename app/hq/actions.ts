@@ -29,10 +29,13 @@ export async function hqLinkGymAction(formData: FormData): Promise<void> {
   const gymId = String(formData.get("gymId") || "");
   const db = await getDb();
   if (gymId && !db.gyms.some((g) => g.id === gymId)) redirect(`/hq/user/${userId}`);
+  let done = false;
   await mutateDb((d) => {
     const u = d.users.find((x) => x.id === userId && (x.role === "pro" || x.role === "member"));
-    if (u) u.gymId = gymId;
+    if (u) { u.gymId = gymId; done = true; }
   });
+  // 対象(選手/会員)が見つからなければ成功表示も監査ログも残さない
+  if (!done) redirect(`/hq/user/${userId}`);
   await history(gymId, undefined, "hq_link_gym", userId);
   redirect(`/hq/user/${userId}?linked=1`);
 }

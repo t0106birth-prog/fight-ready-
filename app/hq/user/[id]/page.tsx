@@ -68,7 +68,8 @@ export default async function HqUserDetail({ params, searchParams }: { params: P
             <div className="row" style={{ gap: 8 }}>
               <select name="gymId" defaultValue={user.gymId ?? ""} style={{ flex: 1 }}>
                 <option value="">無所属（未紐付け）</option>
-                {db.gyms.filter((g) => !g.suspended).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                {/* 現所属が停止中でも選択肢に含める（defaultValue不一致で無所属に化けて誤って外れるのを防ぐ） */}
+                {db.gyms.filter((g) => !g.suspended || g.id === user.gymId).map((g) => <option key={g.id} value={g.id}>{g.name}{g.suspended ? "（停止中）" : ""}</option>)}
               </select>
               <SubmitButton className="btn btn-primary btn-sm" pendingLabel="…">紐付ける</SubmitButton>
             </div>
