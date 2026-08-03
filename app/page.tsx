@@ -28,22 +28,22 @@ export default async function EntryPage() {
               <span className="t">選手・一般会員</span><br />
               <span className="d">体重・運動・疲労・回復を記録して、チームと分け合う</span>
             </Link>
-            <Link href="/login/staff" className="entry-btn blue">
-              <span className="t">ジムスタッフ</span><br />
-              <span className="d">選手と一般会員を、チームで見守り・支える</span>
-            </Link>
+            <div className="entry-btn blue" style={{ opacity: 0.5, cursor: "not-allowed" }} aria-disabled="true">
+              <span className="t">ジムスタッフ <span className="badge badge-attn" style={{ verticalAlign: "middle" }}>Coming Soon</span></span><br />
+              <span className="d">ジム向けの見守り・管理は準備中です</span>
+            </div>
           </>
         }
         signup={
           <>
             <Link href="/register" className="entry-btn red">
               <span className="t">選手・一般会員として登録</span><br />
-              <span className="d">ジムのコード / QR で参加する</span>
+              <span className="d">配られたチームコード / QR で参加する（無料）</span>
             </Link>
-            <Link href="/register-gym" className="entry-btn blue">
-              <span className="t">ジムを新しく作る</span><br />
-              <span className="d">チームコードが自動で発行され、選手・会員を招待できます</span>
-            </Link>
+            <div className="entry-btn blue" style={{ opacity: 0.5, cursor: "not-allowed" }} aria-disabled="true">
+              <span className="t">ジムを新しく作る <span className="badge badge-attn" style={{ verticalAlign: "middle" }}>Coming Soon</span></span><br />
+              <span className="d">ジムの登録・チームコード発行は準備中です</span>
+            </div>
           </>
         }
       />
