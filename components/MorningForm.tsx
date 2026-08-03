@@ -22,7 +22,6 @@ interface MorningWaterCut {
 }
 
 export function MorningForm({ ownerId, defaultWeight, waterCut, defaults, painDefaults = [] }: { ownerId: string; defaultWeight?: number; waterCut?: MorningWaterCut; defaults?: DailyCheckin; painDefaults?: PainLog[] }) {
-  const [pain, setPain] = useState(defaults?.painLevel ?? "none");
   const [danger, setDanger] = useState((defaults?.dangerSymptoms?.length ?? 0) > 0);
   const phaseLabel = waterCut?.phase === "loading" ? "減量＋ローディング中"
     : waterCut?.phase === "cut" ? "減量＋水抜き中"
@@ -77,17 +76,14 @@ export function MorningForm({ ownerId, defaultWeight, waterCut, defaults, painDe
 
       <label className="fl">身体の痛み</label>
       <div className="seg">
-        <label><input type="radio" name="pain" value="none" defaultChecked={!defaults?.painLevel || defaults.painLevel === "none"} onChange={() => setPain("none")} />なし</label>
-        <label><input type="radio" name="pain" value="some" defaultChecked={defaults?.painLevel === "some"} onChange={() => setPain("some")} />少しある</label>
-        <label><input type="radio" name="pain" value="strong" defaultChecked={defaults?.painLevel === "strong"} onChange={() => setPain("strong")} />強い</label>
+        <label><input type="radio" name="pain" value="none" defaultChecked={!defaults?.painLevel || defaults.painLevel === "none"} />なし</label>
+        <label><input type="radio" name="pain" value="some" defaultChecked={defaults?.painLevel === "some"} />少しある</label>
+        <label><input type="radio" name="pain" value="strong" defaultChecked={defaults?.painLevel === "strong"} />強い</label>
       </div>
-      <p className="info-note">「少しある」「強い」を選ぶと、人型の図で痛む場所を記録できます。</p>
-
-      {pain !== "none" && (
-        <div style={{ marginTop: 10 }}>
-          <BodyMap defaults={painDefaults} />
-        </div>
-      )}
+      <p className="info-note">毎朝、人型の図で身体を確認してください。痛みがなければ場所は選ばなくて大丈夫です。</p>
+      <div style={{ marginTop: 10 }}>
+        <BodyMap defaults={painDefaults} />
+      </div>
 
       {/* 身体の気になるサイン（つり・打撲・しびれ等）。会長・スタッフが把握できるように */}
       <label className="fl">身体の気になること（あれば選ぶ・複数可）</label>
