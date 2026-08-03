@@ -147,8 +147,15 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
         {sp.error === "finish" && <div className="alert-band alert-yellow">回復記録と終了確認が必要です。試合終了後に保存してください。</div>}
         {sp.error === "recovery-time" && <div className="alert-band alert-red">計量日時より前に回復記録は保存できません。</div>}
 
-        {/* 今どのフェーズか */}
+        {/* 今どのフェーズか＋スキップ */}
         <WaterCutPhaseBar phase={phase} />
+        {phase === "loading" && (
+          <form action={startCutPhaseAction} style={{ textAlign: "right", marginTop: -4, marginBottom: 8 }}>
+            <OwnerField id={user.id} />
+            <input type="hidden" name="cutBaseline" value={round1(current)} />
+            <SubmitButton className="btn btn-ghost btn-sm" pendingLabel="…">ローディングをスキップ → 水抜きへ</SubmitButton>
+          </form>
+        )}
 
         {/* 安全アラート（あるときだけ主張する） */}
         {hasSymptom && (
@@ -184,7 +191,7 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
         {/* 補助の3数字 */}
         <div className="status-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0,1fr))" }}>
           <StatusTile tile={{ lbl: "開始から", val: lossPctLabel, tone: bandTone }} />
-          {showHydro
+          {(showHydro || hydro?.urineSpecificGravity != null)
             ? <StatusTile tile={{ lbl: "HYDRO", val: hydro?.urineSpecificGravity?.toFixed(isOne ? 4 : 3) ?? "未測定", tone: hydroTone }} />
             : <StatusTile tile={{ lbl: phase === "cut" ? "水抜き開始" : "開始体重", val: `${effBaseline}kg`, tone: "blue" }} />}
           <StatusTile tile={{ lbl: "計量まで", val: untilLabel(period.weighInDatetime), tone: "blue" }} />
@@ -290,9 +297,9 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
           </div>
         )}
 
-        {/* HYDROを測ったら記録（ONE以外・水抜き以降） */}
-        {showHydro && !isOne && phase !== "loading" && !showRecovery && (
-          <Link href="/u/watercut/hydro" className="btn btn-ghost btn-sm" style={{ width: "100%" }}>💧 HYDROを記録（尿比重・尿の色・症状）</Link>
+        {/* 尿比重(HYDRO)の記録はいつでもできるよう常時リンク（ONE以外・水抜き以降） */}
+        {!isOne && phase !== "loading" && !showRecovery && (
+          <Link href="/u/watercut/hydro" className="btn btn-ghost btn-sm" style={{ width: "100%" }}>💧 尿比重・HYDROを記録（尿の色・症状も）</Link>
         )}
 
         {/* 計量後：リカバリー案内 */}
