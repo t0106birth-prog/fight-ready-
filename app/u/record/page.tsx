@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getDb } from "@/lib/store";
@@ -74,20 +75,25 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
         <>
         <p className="kicker">今日の記録</p>
         {items.map((it) => (
-          <Link key={it.href} href={it.href} className={`todo-item ${it.done ? "done" : ""}`}>
-            <span className="tk" style={{ fontSize: 18 }}>{it.done ? "✓" : it.ico}</span>
-            <span className="tt">{it.label}<br /><span className="meta" style={{ fontWeight: 400 }}>{it.desc}</span></span>
-            <span className={`sig ${it.done ? "sig-green" : "sig-blue"}`}>{it.done ? "完了" : "未記録"}</span>
-          </Link>
+          <Fragment key={it.href}>
+            <Link href={it.href} className={`todo-item ${it.done ? "done" : ""}`}>
+              <span className="tk" style={{ fontSize: 18 }}>{it.done ? "✓" : it.ico}</span>
+              <span className="tt">{it.label}<br /><span className="meta" style={{ fontWeight: 400 }}>{it.desc}</span></span>
+              <span className={`sig ${it.done ? "sig-green" : "sig-blue"}`}>{it.done ? "完了" : "未記録"}</span>
+            </Link>
+            {it.href === "/u/record/activity" && (
+              <Link href="/u/record/running" className="btn btn-ghost" style={{ margin: "-2px 0 8px" }}>
+                🏃 ランニングの詳細を記録
+              </Link>
+            )}
+          </Fragment>
         ))}
-        <Link href="/u/record/running" className="btn btn-ghost" style={{ margin: "2px 0 14px" }}>
-          🏃 ランニングの詳細を記録
-        </Link>
         {/* 水抜きはプロ選手なら常に開ける（7日前からは自動で強調表示） */}
         {isPro && (
           <>
             <p className="kicker">計量準備</p>
             {waterCut ? (() => {
+              const phase = waterCutPhase(waterCut);
               const log = latestWaterCutLog(db, user.id, waterCut.id);
               const current = log?.currentWeight ?? waterCut.baselineWeight;
               const { pct } = acuteLoss(waterCut.baselineWeight, current);
@@ -96,17 +102,23 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
                 <Link href="/u/watercut" className="card" style={{ display: "block", color: "var(--ink)", borderColor, padding: "14px 16px" }}>
                   <div className="row" style={{ alignItems: "center" }}>
                     <div>
-                      <b>{PHASE_LABEL[waterCutPhase(waterCut)]}</b>
+                      <b>{PHASE_LABEL[phase]}</b>
                       <p className="small" style={{ margin: "5px 0 0" }}>計量まで {untilLabel(waterCut.weighInDatetime)} ・ 開始から −{pct}%</p>
+                      <p className="small" style={{ margin: "5px 0 0", color: "var(--blue)" }}>
+                        {phase === "recovery" ? "計量後の記録はこちらから" : "ローディング・水抜き期間の記録はこちらから"}
+                      </p>
                     </div>
                     <span className="ta">›</span>
                   </div>
                 </Link>
               );
             })() : (
-              <Link href="/u/watercut" className={inWaterCutWindow(user) ? "btn btn-accent" : "btn btn-ghost"}>
-                💧 計量準備を始める
-              </Link>
+              <>
+                <p className="meta mt0">ローディングや水抜きを始めるときは、こちらをタップしてください。</p>
+                <Link href="/u/watercut" className={inWaterCutWindow(user) ? "btn btn-accent" : "btn btn-ghost"}>
+                  💧 計量準備を始める
+                </Link>
+              </>
             )}
             {/* 計量後のリカバリー体重（準備中は常に表示。計量日を過ぎたら入力可） */}
             {waterCut && (() => {
