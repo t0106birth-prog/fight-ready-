@@ -103,7 +103,7 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
                   <div className="row" style={{ alignItems: "center" }}>
                     <div>
                       <b>{PHASE_LABEL[phase]}</b>
-                      <p className="small" style={{ margin: "5px 0 0" }}>計量まで {untilLabel(waterCut.weighInDatetime)} ・ 開始から −{pct}%</p>
+                      <p className="small" style={{ margin: "5px 0 0" }}>計量まで {untilLabel(waterCut.weighInDatetime)} ・ 開始から {pct > 0 ? "−" : pct < 0 ? "+" : "±"}{Math.abs(pct)}%</p>
                       <p className="small" style={{ margin: "5px 0 0", color: "var(--blue)" }}>
                         {phase === "recovery" ? "計量後の記録はこちらから" : "ローディング・水抜き期間の記録はこちらから"}
                       </p>

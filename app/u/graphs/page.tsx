@@ -15,7 +15,8 @@ export default async function GraphsPage({ searchParams }: { searchParams: Promi
   const user = await currentUser();
   if (!user || user.role === "staff") redirect("/");
   const db = await getDb();
-  const view = sp.view === "load" || sp.view === "condition" ? sp.view : "weight";
+  // 運動とコンディションは1画面に統合（負荷↔体調の関係を一目で見せる）。旧 ?view=load / ?view=condition は統合ビューへ。
+  const view = sp.view === "load" || sp.view === "condition" || sp.view === "activity" ? "activity" : "weight";
   const isPro = user.role === "pro";
   const isMember = user.role === "member";
   const wc = activeWaterCut(db, user.id);
@@ -136,10 +137,9 @@ export default async function GraphsPage({ searchParams }: { searchParams: Promi
     <>
       <Hero title="グラフ" sub="記録の振り返り" backHref="/u" />
       <div className="shell">
-        <nav aria-label="グラフの表示切替" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6, marginBottom: 14 }}>
+        <nav aria-label="グラフの表示切替" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 6, marginBottom: 14 }}>
           <Link href="/u/graphs?view=weight" className={`btn btn-sm ${view === "weight" ? "btn-primary" : "btn-ghost"}`} aria-current={view === "weight" ? "page" : undefined}>体重</Link>
-          <Link href="/u/graphs?view=load" className={`btn btn-sm ${view === "load" ? "btn-primary" : "btn-ghost"}`} aria-current={view === "load" ? "page" : undefined}>運動</Link>
-          <Link href="/u/graphs?view=condition" className={`btn btn-sm ${view === "condition" ? "btn-primary" : "btn-ghost"}`} aria-current={view === "condition" ? "page" : undefined}>コンディション</Link>
+          <Link href="/u/graphs?view=activity" className={`btn btn-sm ${view === "activity" ? "btn-primary" : "btn-ghost"}`} aria-current={view === "activity" ? "page" : undefined}>運動・コンディション</Link>
         </nav>
 
         {view === "weight" && (
@@ -151,7 +151,7 @@ export default async function GraphsPage({ searchParams }: { searchParams: Promi
                 ? <div className="card tight"><span className="meta">計量まで</span><br /><b>{cdDays}日</b></div>
                 : lost != null && <div className="card tight"><span className="meta">スタートから</span><br /><b>{lost > 0 ? "−" : lost < 0 ? "+" : "±"}{Math.abs(lost)}kg</b></div>}
               {isPro && wcLossPct != null
-                ? <div className="card tight"><span className="meta">開始から</span><br /><b>−{wcLossPct}%</b></div>
+                ? <div className="card tight"><span className="meta">開始から</span><br /><b>{wcLossPct > 0 ? "−" : wcLossPct < 0 ? "+" : "±"}{Math.abs(wcLossPct)}%</b></div>
                 : goalCoherent && goalDistance != null && <div className="card tight"><span className="meta">目標まで</span><br /><b>{goalReached ? "目標到達" : `あと ${goalDistance}kg`}</b></div>}
             </div>
 
@@ -173,80 +173,79 @@ export default async function GraphsPage({ searchParams }: { searchParams: Promi
           </>
         )}
 
-        {view === "load" && (
+        {view === "activity" && (
           <>
-            <p className="kicker">運動量（負荷）</p>
+            <p className="kicker">運動 × コンディション</p>
             <div className="card">
-              {isMember ? (
-                activeLoads.length > 0 && (
-                  <div className="alert-band alert-green" style={{ margin: "0 0 8px" }}>
-                    <div className="at">よく動けています 💪</div>
-                    少しずつ運動量を上げていくと、体が慣れてまた強くなれます（<b>漸進性過負荷の原則</b>）。増やせているのは良いサインです。
+              {(() => {
+                // 負荷が上がっているか / コンディションが乱れているか、の2軸で一言まとめる。
+                const loadUp = isMember ? activeLoads.length > 0 : spikeDays.length > 0;
+                if (isMember) {
+                  if (painConcern) return (
+                    <div className="alert-band alert-yellow" style={{ margin: "0 0 10px" }}>
+                      <div className="at">痛みが出ています</div>
+                      運動量（棒）と痛みの色を合わせて見てください。続くときは休みを入れるか、スタッフに相談しましょう。
+                      <div style={{ marginTop: 6 }}>👐 <b>鍼・マッサージなどのボディケア</b>で早めに整えるのもおすすめです。</div>
+                    </div>
+                  );
+                  if (loadUp && trainingEffect) return (
+                    <div className="alert-band alert-green" style={{ margin: "0 0 10px" }}>
+                      <div className="at">よく動けています 💪 疲れは強くなる過程</div>
+                      運動量が上がって体はしっかり反応しています。よく食べて眠れば回復します。この調子で。
+                    </div>
+                  );
+                  if (loadUp) return (
+                    <div className="alert-band alert-green" style={{ margin: "0 0 10px" }}>
+                      <div className="at">運動量が上がっても、コンディションは安定 👍</div>
+                      体が慣れてきています。少しずつ増やせているのは良いサインです。
+                    </div>
+                  );
+                  return <div className="alert-band alert-green" style={{ margin: "0 0 10px" }}>良いリズムです 👍 この調子で続けましょう。</div>;
+                }
+                // プロ：負荷↔体調の関係を主役にする
+                if (loadUp && concerns.length > 0) return (
+                  <div className="alert-band alert-yellow" style={{ margin: "0 0 10px" }}>
+                    <div className="at">運動量が増えた日のあと、コンディションに乱れ</div>
+                    直近14日で <b>{spikeDays.length}日</b> 運動量が急増しています。負荷が上がった列の下で、色（{concerns.join(" / ")}）が黄・赤になっていないか見比べてください。
                   </div>
-                )
-              ) : (
-                spikeDays.length > 0 && (
-                  <div className="alert-band alert-yellow" style={{ margin: "0 0 8px" }}>
-                    <div className="at">運動量が急に増えた日があります</div>
-                    直近14日で <b>{spikeDays.length}日</b>、普段より大きく増えています。疲労・痛みの色と合わせて見てください。
+                );
+                if (loadUp) return (
+                  <div className="alert-band alert-green" style={{ margin: "0 0 10px" }}>
+                    <div className="at">運動量は上がっていますが、コンディションは保てています 👍</div>
+                    負荷が増えても体調が崩れていなければ、うまく順応できています。この調子で。
                   </div>
-                )
-              )}
-              <p className="meta mt0">
-                棒の高さ＝その日の運動量。{isMember ? (
-                  <>色は<b>普段との比べ</b>：<span style={{ color: "#6bb0ff" }}>■</span>いつも通り / <span style={{ color: "var(--green-bright)" }}>■</span>よく動けた</>
-                ) : (
-                  <>色は<b>普段（この期間の運動日の平均）との比べ</b>：<span style={{ color: "#6bb0ff" }}>■</span>普段どおり / <span style={{ color: "var(--amber-ink)" }}>■</span>やや多い / <span style={{ color: "var(--red-bright)" }}>■</span>急増</>
-                )}
-              </p>
-              <LoadBars cells={loads} avg={avgLoad} coach={isMember} />
-              <DayAxis days={days} />
-              <p className="info-note">
-                {isMember
-                  ? "疲れが残るときは、しっかり食べて眠れば回復します。少しの疲れは強くなる過程です。"
-                  : "運動量が上がった後は、コンディションの疲労・だるさ・痛みが赤くなっていないかを確認しましょう。"}
-              </p>
-            </div>
-          </>
-        )}
+                );
+                if (concerns.length > 0) return (
+                  <div className="alert-band alert-yellow" style={{ margin: "0 0 10px" }}><b>最近の気になること</b><br />{concerns.join(" / ")}</div>
+                );
+                return <div className="alert-band alert-green" style={{ margin: "0 0 10px" }}>この2週間、運動もコンディションも大きな乱れはありません 👍</div>;
+              })()}
 
-        {view === "condition" && (
-          <>
-            <p className="kicker">疲労・回復</p>
-            <div className="card">
-              {isMember ? (painConcern ? (
-                <div className="alert-band alert-yellow" style={{ margin: "0 0 10px" }}>
-                  <div className="at">痛みが出ています</div>
-                  痛みは「無理をしない」サイン。長く続くときは休みを入れるか、スタッフに相談しましょう。
-                  <div style={{ marginTop: 6 }}>👐 <b>鍼・マッサージなどのボディケア</b>で早めに整えるのもおすすめです。</div>
-                </div>
-              ) : trainingEffect ? (
-                <div className="alert-band alert-green" style={{ margin: "0 0 10px" }}>
-                  <div className="at">トレーニングが効いています 👍</div>
-                  少しの疲れは体が強くなっている証。しっかり食べて眠れば回復します。この調子で続けましょう。
-                  <div style={{ marginTop: 6 }}>👐 疲れを翌日に残さないために、<b>入浴・マッサージ・鍼・ストレッチなどのボディケア</b>で回復を助けるのがおすすめです。</div>
-                </div>
-              ) : (
-                <div className="alert-band alert-green" style={{ margin: "0 0 10px" }}>
-                  良いリズムです 👍 この調子で続けましょう。
-                  <div style={{ marginTop: 6 }}>👐 コンディション維持には、<b>入浴・マッサージ・鍼などのボディケア</b>を定期的に取り入れるのがおすすめです。</div>
-                </div>
-              )) : concerns.length > 0 ? (
-                <div className="alert-band alert-yellow" style={{ margin: "0 0 10px" }}><b>最近の気になること</b><br />{concerns.join(" / ")}</div>
-              ) : (
-                <div className="alert-band alert-green" style={{ margin: "0 0 10px" }}>この2週間、大きな乱れはありません 👍</div>
-              )}
-              <p className="info-note mt0">各項目の右に最近の状態を表示。色マスは左が14日前、右が今日です（緑＝良い・黄＝注意・赤＝強い不調・灰＝記録なし）。</p>
+              {/* 上＝運動量（棒）、下＝コンディション（色マス）。同じ列＝同じ日でそろえて、負荷↔体調を縦に見比べる。 */}
+              <div className="row" style={{ marginBottom: 4 }}>
+                <span style={{ fontSize: 13, fontWeight: 800 }}>運動量（負荷）</span>
+                <span style={{ fontSize: 11, color: "var(--muted)" }}>
+                  {isMember
+                    ? <><span style={{ color: "#6bb0ff" }}>■</span>いつも通り / <span style={{ color: "var(--green-bright)" }}>■</span>よく動けた</>
+                    : <><span style={{ color: "#6bb0ff" }}>■</span>普段どおり / <span style={{ color: "var(--amber-ink)" }}>■</span>やや多い / <span style={{ color: "var(--red-bright)" }}>■</span>急増</>}
+                </span>
+              </div>
+              <LoadBars cells={loads} avg={avgLoad} coach={isMember} />
+
+              <div style={{ borderTop: "1px solid var(--line)", margin: "12px 0 10px" }} />
+
+              <p className="info-note mt0" style={{ marginBottom: 8 }}>コンディション：緑＝良い・黄＝注意・赤＝強い不調・灰＝記録なし。上の運動量と同じ列＝同じ日です。</p>
               <MetricRow label="疲労感" cells={fatigue} state={soften(stFatigue)} />
               <MetricRow label="だるさ" cells={sluggish} state={soften(stSluggish)} />
               <MetricRow label="睡眠" cells={sleep} state={soften(stSleep)} />
               <MetricRow label="痛み" cells={pain} state={stPain} />
               <MetricRow label="休養後の回復" cells={recovery} state={soften(stRecovery)} />
               <DayAxis days={days} />
+
               <p className="info-note">
                 {isMember
-                  ? "日ごとの上がり下がりは気にしすぎず、数日間の流れで見てください。痛みが続くときだけ無理をしないで。"
-                  : "日単位の変化だけで過剰に判断せず、数日間の傾向も合わせて見てください。"}
+                  ? "運動量（棒）が上がった日の前後で、コンディションの色が黄・赤に変わっていないかを見てください。痛みが続くときだけ無理をしないで。"
+                  : "運動量（棒）が上がった列の後ろで、疲労・だるさ・痛みの色が赤くなっていないかを見ます。上がっても色が変わらなければ、うまく順応できています。"}
               </p>
             </div>
           </>
