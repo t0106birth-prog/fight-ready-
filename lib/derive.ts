@@ -77,6 +77,15 @@ export function inWaterCutWindow(user: User): boolean {
 export function activeWaterCut(db: DB, userId: string) {
   return db.waterCutPeriods.find((p) => p.userId === userId && p.status !== "done") ?? null;
 }
+
+/** 計量準備のフェーズ。ローディング→水抜き→計量→リカバリー。 */
+export type WaterCutPhase = "loading" | "cut" | "weighin" | "recovery" | "done";
+export function waterCutPhase(period: { status: string; weighInDatetime: string; cutStartedAt?: string }): WaterCutPhase {
+  if (period.status === "done") return "done";
+  if (period.status === "recovery") return "recovery";
+  if (new Date(period.weighInDatetime).getTime() <= Date.now()) return "weighin";
+  return period.cutStartedAt ? "cut" : "loading";
+}
 export function latestWaterCutLog(db: DB, userId: string, periodId: string) {
   return db.waterCutLogs.filter((l) => l.userId === userId && l.periodId === periodId)
     .sort((a, b) => (a.recordedDatetime < b.recordedDatetime ? 1 : -1))[0] ?? null;

@@ -304,12 +304,25 @@ export async function startWaterCutAction(formData: FormData): Promise<void> {
     weighInDatetime: fromDateTimeLocal(str(formData, "weighIn")) || nowIso(),
     fightDatetime: str(formData, "fight") ? fromDateTimeLocal(str(formData, "fight")) : undefined,
     status: "active",
+    loadingTargetLiters: numOrU(formData, "loadingTarget"), // ウォーターローディングの1日の水分目標(L)
     createdAt: nowIso(),
   };
   await mutateDb((d) => {
     d.waterCutPeriods.push(period);
   });
   await history(u.gymId, u.id, "watercut_start");
+  redirect("/u/watercut");
+}
+
+/** ローディング→水抜きへフェーズを進める（本人が実際に水を絞り始めるタイミングで押す）。 */
+export async function startCutPhaseAction(formData: FormData): Promise<void> {
+  const u = await mePro();
+  await assertOwner(formData, u);
+  await mutateDb((d) => {
+    const p = d.waterCutPeriods.find((x) => x.userId === u.id && x.status === "active" && !x.cutStartedAt);
+    if (p) p.cutStartedAt = nowIso();
+  });
+  await history(u.gymId, u.id, "watercut_cut_start");
   redirect("/u/watercut");
 }
 
@@ -373,9 +386,12 @@ export async function saveWaterCutLogAction(formData: FormData): Promise<void> {
   const current = numOrU(formData, "current");
   if (!validWeight(current)) redirect("/u/watercut?error=current");
   const { kg, pct } = acuteLoss(period!.baselineWeight, current!);
+  const waterIntakeLiters = numOrU(formData, "waterIntake");
   const log: WaterCutLog = {
     id: uid(), gymId: u.gymId, userId: u.id, periodId: period!.id,
     currentWeight: current!, acuteLossKg: kg, acuteLossPercentage: pct,
+    waterIntakeLiters: waterIntakeLiters != null && waterIntakeLiters >= 0 && waterIntakeLiters <= 20 ? waterIntakeLiters : undefined,
+    tookElectrolyte: formData.get("electrolyte") === "on" ? true : undefined,
     source: "manual", recordedDatetime: nowIso(), createdAt: nowIso(),
   };
   await appendRow("waterCutLogs", log);

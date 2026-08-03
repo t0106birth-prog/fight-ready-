@@ -7,10 +7,11 @@ import { StartWaterCutForm, WaterCutBaselineForm, WaterCutLogForm } from "@/comp
 import { StatusTile } from "@/components/StatusTile";
 import { SubmitButton } from "@/components/SubmitButton";
 import { WaterCutGuide } from "@/components/WaterCutGuide";
+import { WaterCutPhaseBar } from "@/components/WaterCutPhaseBar";
 import { OwnerField } from "@/components/OwnerField";
-import { finishWaterCutAction } from "@/app/u/actions";
+import { finishWaterCutAction, startCutPhaseAction } from "@/app/u/actions";
 import { acuteLoss, acuteLossBand, hydroBand, oneHydroBand, oneReadyVerdict, waterCutTable } from "@/lib/judge";
-import { activeWaterCut, currentWeight, latestWaterCutLog, latestHydration } from "@/lib/derive";
+import { activeWaterCut, currentWeight, latestWaterCutLog, latestHydration, waterCutPhase } from "@/lib/derive";
 import { businessDate, untilLabel, round1, fmtDateTime, hoursBetweenIso, signed, toDateTimeLocal } from "@/lib/calc";
 import { today } from "@/lib/store";
 
@@ -56,6 +57,7 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
     );
   }
 
+  const phase = waterCutPhase(period);
   const log = latestWaterCutLog(db, user.id, period.id);
   const current = log?.currentWeight ?? period.baselineWeight;
   const { kg, pct } = acuteLoss(period.baselineWeight, current);
@@ -99,6 +101,7 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
   const logs = db.waterCutLogs
     .filter((l) => l.periodId === period.id)
     .sort((a, b) => (a.recordedDatetime < b.recordedDatetime ? -1 : 1));
+  const waterLogs = logs.filter((l) => l.waterIntakeLiters != null);
   const paceRows = logs.map((l, i) => {
     const prev = i > 0 ? logs[i - 1].currentWeight : period.baselineWeight;
     const prevAt = i > 0 ? logs[i - 1].recordedDatetime : period.startDatetime;
@@ -143,6 +146,24 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
         {sp.error === "current" && <div className="alert-band alert-red">現在体重を20〜300kgの範囲で入力してください。</div>}
         {sp.error === "finish" && <div className="alert-band alert-yellow">回復記録と終了確認が必要です。試合日時を登録済みの場合は、試合終了後に保存してください。</div>}
         {sp.error === "recovery-time" && <div className="alert-band alert-red">計量日時より前に回復記録を保存することはできません。</div>}
+
+        {/* 計量準備のフェーズ（今どこにいるか） */}
+        <WaterCutPhaseBar phase={phase} />
+
+        {/* ローディング期：水を多めに飲む時期。ここから水抜きへ進むボタンを出す */}
+        {phase === "loading" && (
+          <div className="card" style={{ borderColor: "var(--blue)" }}>
+            <b>🥤 ローディング期</b>
+            <p className="info-note mt0">
+              水を多めに飲んで体を「出すモード」にする時期。<b>体重は一旦増えてOK</b>（水を溜めている証拠）。
+              {period.loadingTargetLiters ? ` 1日の目標は ${period.loadingTargetLiters}L。` : ""} 下の記録で「体重＋水分量」を毎日入れましょう。
+            </p>
+            <form action={startCutPhaseAction}>
+              <OwnerField id={user.id} />
+              <SubmitButton className="btn btn-primary btn-sm" pendingLabel="切替中…" style={{ width: "100%" }}>💧 水抜きを開始する（ここから水を絞る）</SubmitButton>
+            </form>
+          </div>
+        )}
 
         {/* いま何をすればいいか（1行で示す） */}
         <div className="alert-band alert-blue">
@@ -204,8 +225,19 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
 
         {period.status === "active" && (
           <>
-            <p className="kicker">STEP 2　現在体重を記録</p>
-            <WaterCutLogForm ownerId={user.id} defaultWeight={current} />
+            <p className="kicker">STEP 2　{phase === "loading" ? "体重・水分量を記録" : "現在体重・水分量を記録"}</p>
+            <WaterCutLogForm ownerId={user.id} defaultWeight={current} phase={phase === "loading" ? "loading" : "cut"} loadingTarget={period.loadingTargetLiters} />
+            {waterLogs.length > 0 && (
+              <div className="card tight">
+                <b>水分量の推移</b>
+                {waterLogs.slice(-8).map((l) => (
+                  <div className="progress-row" key={l.id} style={{ fontSize: 13 }}>
+                    <span>{fmtDateTime(l.recordedDatetime)}</span>
+                    <span><b>{l.waterIntakeLiters}L</b>{l.tookElectrolyte ? <span className="meta"> ・電解質✓</span> : null}<span className="meta"> ／ {round1(l.currentWeight)}kg</span></span>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 

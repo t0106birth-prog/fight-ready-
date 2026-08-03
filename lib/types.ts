@@ -197,6 +197,9 @@ export interface WaterCutPeriod {
   weighInDatetime: string;
   fightDatetime?: string;
   status: "active" | "recovery" | "done";
+  // フェーズ: ローディング(cutStartedAt未設定) → 水抜き(cutStartedAt設定) → 計量/リカバリー(status)。
+  loadingTargetLiters?: number; // ウォーターローディングの1日の水分目標(L)。本人が選ぶ
+  cutStartedAt?: string;        // 「水抜きを開始する」を押した日時（ローディング→水抜きの切替）
   actualWeighInWeight?: number;
   weighedInAt?: string;
   createdAt: string;
@@ -211,6 +214,8 @@ export interface WaterCutLog {
   currentWeight: number;
   acuteLossKg: number;
   acuteLossPercentage: number;
+  waterIntakeLiters?: number;  // その日の水分摂取量(L)。ローディングで多く、水抜きで絞る
+  tookElectrolyte?: boolean;   // 電解質（経口補水・塩分等）を摂ったか
   source?: "manual" | "morning";
   recordedDatetime: string;
   createdAt: string;

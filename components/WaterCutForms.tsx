@@ -66,8 +66,13 @@ export function StartWaterCutForm({
       <input id="weighIn" name="weighIn" type="datetime-local" defaultValue={toDateTimeLocalValue(defaultWeighIn)} required />
       <label className="fl" htmlFor="fight">試合日時</label>
       <input id="fight" name="fight" type="datetime-local" defaultValue={toDateTimeLocalValue(defaultFight)} />
+
+      <label className="fl" htmlFor="loadingTarget">ローディング水分目標（1日・L）<span className="meta"> 任意</span></label>
+      <input id="loadingTarget" name="loadingTarget" type="number" min="0" max="20" step="0.5" inputMode="decimal" placeholder="例：7.5" />
+      <p className="info-note mt0">計量前に水を多めに飲む「ウォーターローディング」の1日の目標量。自分で決めてOK（日々の記録で実際の量を入れられます）。空欄でも始められます。</p>
+
       <div style={{ height: 14 }} />
-      <SubmitButton className="btn btn-primary" pendingLabel="開始しています…">水抜きモニタリングを開始</SubmitButton>
+      <SubmitButton className="btn btn-primary" pendingLabel="開始しています…">計量準備をはじめる</SubmitButton>
     </form>
   );
 }
@@ -109,12 +114,13 @@ export function WaterCutBaselineForm({ ownerId, baselineWeight }: { ownerId: str
   );
 }
 
-/** 現在体重の記録(§24) */
-export function WaterCutLogForm({ ownerId, defaultWeight }: { ownerId: string; defaultWeight?: number }) {
+/** 現在体重＋水分量＋電解質の記録(§24)。フェーズで水分の入れ方の案内を変える。 */
+export function WaterCutLogForm({ ownerId, defaultWeight, phase, loadingTarget }: { ownerId: string; defaultWeight?: number; phase?: "loading" | "cut"; loadingTarget?: number }) {
+  const loading = phase === "loading";
   return (
     <form action={saveWaterCutLogAction} className="card tight watercut-weight-form">
       <OwnerField id={ownerId} />
-      <label className="fl" htmlFor="current">現在体重</label>
+      <label className="fl mt0" htmlFor="current">現在体重</label>
       <div className="watercut-weight-field">
         <input
           id="current"
@@ -131,8 +137,17 @@ export function WaterCutLogForm({ ownerId, defaultWeight }: { ownerId: string; d
         />
         <span aria-hidden="true">kg</span>
       </div>
-      <p id="currentWeightHelp" className="info-note">体重計に表示された数値を、小数第1位まで入力できます。</p>
-      <SubmitButton className="btn btn-accent" pendingLabel="記録しています…">この体重を記録</SubmitButton>
+      <p id="currentWeightHelp" className="info-note">{loading ? "ローディング中は体重が一旦増えてOK（水を溜めている証拠）。" : "体重計の数値を小数第1位まで。"}</p>
+
+      <label className="fl" htmlFor="waterIntake">
+        今日の水分量（L）{loading && loadingTarget ? <span className="meta"> 目標 {loadingTarget}L</span> : null}
+      </label>
+      <input id="waterIntake" name="waterIntake" type="number" min="0" max="20" step="0.1" inputMode="decimal" placeholder={loading ? "例：7.5（多めに）" : "例：1.0（絞る）"} />
+
+      <label className="check"><input type="checkbox" name="electrolyte" />電解質（経口補水液・塩分など）を摂った</label>
+      <p className="info-note mt0">大量に水を飲むときは、電解質も一緒に摂ると体調を崩しにくいです（量の指示はしません）。</p>
+
+      <SubmitButton className="btn btn-accent" pendingLabel="記録しています…">この記録を保存</SubmitButton>
     </form>
   );
 }
