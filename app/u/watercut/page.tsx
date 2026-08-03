@@ -228,25 +228,43 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
               </div>
             )}
 
-            {/* ローディング水分量の目安（参考） */}
+            {/* ウォーターローディングの目安（参考）：体重5kg刻み */}
             {phase === "loading" && (
               <details className="card tight">
-                <summary><b>水分量の目安（参考）</b></summary>
+                <summary><b>ウォーターローディングの目安（参考）</b></summary>
                 <div style={{ marginTop: 8 }}>
                   <p className="meta mt0">一般的なウォーターローディングは <b>体重×約60〜100mL/日</b> が目安とされます（参考であり、飲む量の指示ではありません）。</p>
                   <table className="reftable">
-                    <thead><tr><th>体重</th><th>目安/日（約）</th></tr></thead>
+                    <thead><tr><th>体重</th><th>1日の目安（約）</th></tr></thead>
                     <tbody>
                       <tr style={{ outline: "2px solid var(--blue)" }}>
                         <td className="k">あなた {round1(effBaseline)}kg</td>
                         <td><b>{round1(effBaseline * 0.06)}〜{round1(effBaseline * 0.1)}L</b></td>
                       </tr>
-                      {[60, 70, 80, 90].map((w) => (
+                      {Array.from({ length: 12 }, (_, i) => 45 + i * 5).map((w) => (
                         <tr key={w}><td className="k">{w}kg</td><td>{round1(w * 0.06)}〜{round1(w * 0.1)}L</td></tr>
                       ))}
                     </tbody>
                   </table>
                   <p className="info-note">大量に飲むときは<b>電解質も一緒に</b>。体調（頭痛・吐き気・むくみ等）を最優先に、無理はしないでください。</p>
+                </div>
+              </details>
+            )}
+
+            {/* 水抜きの目安（参考）：ローディングと揃えて水抜き期にも置く */}
+            {phase === "cut" && (
+              <details className="card tight">
+                <summary><b>水抜きの目安（参考）</b></summary>
+                <div style={{ marginTop: 8 }}>
+                  <p className="meta mt0">水抜き開始 {effBaseline}kg に対する、減少率ごとの体重（参考であり、抜いてよい量の指示ではありません）。</p>
+                  <table className="reftable">
+                    <thead><tr><th>開始から</th><th>減少量</th><th>その時の体重</th></tr></thead>
+                    <tbody>
+                      {table.map((r) => <tr key={r.pct}><td className="k">{r.pct}%</td><td>{r.kg}kg</td><td><b>{r.weight}kg</b></td></tr>)}
+                      <tr className="watercut-target-row"><td className="k">計量目標<br /><span className="meta">{plannedLoss.pct}%</span></td><td>{plannedLoss.kg}kg</td><td><b>{period.targetWeight}kg</b></td></tr>
+                    </tbody>
+                  </table>
+                  <p className="info-note">症状があるときは率に関わらず「危険（赤）」。体調を最優先に。</p>
                 </div>
               </details>
             )}
@@ -333,15 +351,6 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
               </tbody>
             </table>
             <p className="info-note">症状があるときは率に関わらず「危険（赤）」。これは監視の目安で、安全な水抜き量を示すものではありません。</p>
-
-            <p className="kicker">水抜き早見表（{phase === "cut" ? "水抜き開始" : "開始"} {effBaseline}kg 基準）</p>
-            <table className="reftable">
-              <thead><tr><th>開始から</th><th>減少量</th><th>体重</th></tr></thead>
-              <tbody>
-                {table.map((r) => <tr key={r.pct}><td className="k">{r.pct}%</td><td>{r.kg}kg</td><td><b>{r.weight}kg</b></td></tr>)}
-                <tr className="watercut-target-row"><td className="k">計量目標<br /><span className="meta">{plannedLoss.pct}%</span></td><td>{plannedLoss.kg}kg</td><td><b>{period.targetWeight}kg</b></td></tr>
-              </tbody>
-            </table>
 
             {showHydro && (
               <>
