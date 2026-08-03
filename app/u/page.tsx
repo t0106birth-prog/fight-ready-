@@ -3,12 +3,11 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getDb } from "@/lib/store";
 import { UserTabbar, Hero } from "@/components/Nav";
-import { StatusTile } from "@/components/StatusTile";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requestPtTrialAction } from "@/app/u/actions";
 import {
-  statusTiles, todosDone, streakDays, weeklyActivityCount, currentWeight,
-  activeWaterCut, latestWaterCutLog,
+  todosDone, currentWeight,
+  activeWaterCut, latestWaterCutLog, waterCutPhase,
 } from "@/lib/derive";
 import { dailyVerdict, acuteLoss } from "@/lib/judge";
 import { daysUntil, round1, untilLabel, businessDate, fmtDate } from "@/lib/calc";
@@ -21,11 +20,8 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
   const db = await getDb();
 
   const isPro = user.role === "pro";
-  const tiles = statusTiles(db, user);
   const todos = todosDone(db, user.id);
   const verdict = dailyVerdict(db, user);
-  const streak = streakDays(db, user.id);
-  const week = weeklyActivityCount(db, user.id);
   const cw = currentWeight(db, user);
   const inquiry = db.ptInquiries.find((i) => i.userId === user.id && (i.status === "wanted" || i.status === "contacted"));
   const camp = db.camps.find((c) => c.userId === user.id && c.status === "active");
@@ -39,12 +35,23 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
 
   const targetDays = daysUntil(user.targetDate);
-  const remain = user.targetWeight != null && cw != null ? round1(cw - user.targetWeight) : null;
   // 一般会員は「スタートから −◯kg」を主役に（締切プレッシャーの「目標日まで」は出さない）
   const firstWeight = db.dailyCheckins.filter((c) => c.userId === user.id && c.weight != null)
     .sort((a, b) => (a.date < b.date ? -1 : 1))[0]?.weight;
   const startW = user.startWeight ?? firstWeight ?? null;
   const lost = startW != null && cw != null ? round1(startW - cw) : null;
+
+  // 計量目標は「進行中の水抜き期間の目標」を最優先。user.targetWeight は一般目標欄で、
+  // プロの計量目標（＝WaterCutPeriod.targetWeight）と混同しやすい（役割切替後の残存にも注意）。
+  const weighInTarget = isPro && wcPeriod ? wcPeriod.targetWeight : user.targetWeight ?? null;
+  // ゴールの基準体重（これより軽ければ減量ゴール）。プロの水抜きは開始体重、それ以外はスタート体重。
+  const goalRef = isPro && wcPeriod ? wcPeriod.baselineWeight : startW;
+  const goalIsLoss = weighInTarget != null && goalRef != null ? weighInTarget <= goalRef : true;
+  // 「目標到達」は“到達方向”に達したときだけ。目標が現在より重い等の不整合データで誤って到達表示しない。
+  const goalReached = weighInTarget != null && cw != null
+    ? (goalIsLoss ? cw <= weighInTarget : cw >= weighInTarget)
+    : false;
+  const goalToGo = weighInTarget != null && cw != null ? round1(Math.abs(cw - weighInTarget)) : null;
 
   const todoList = [
     { key: "morning", label: "朝のチェック", href: "/u/record/morning", done: todos.morning },
@@ -52,6 +59,8 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
     { key: "nutrition", label: "食事達成度", href: "/u/record/nutrition", done: todos.nutrition },
     { key: "night", label: "夜の回復チェック", href: "/u/record/rest", done: todos.night },
   ];
+  const completedTodos = todoList.filter((t) => t.done).length;
+  const nextTodo = todoList.find((t) => !t.done);
 
   return (
     <>
@@ -102,10 +111,13 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
 
             {/* 13-2 今日の記録（ホームはサマリーだけ。入力は「記録」タブへ集約して差別化） */}
             <p className="kicker">今日の記録</p>
-            <Link href="/u/record" className="card" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
+            <Link href={nextTodo?.href ?? "/u/record"} className="card" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
               <div className="row">
-                <b>{todoList.filter((t) => t.done).length}/{todoList.length} 完了</b>
-                <span className="btn btn-primary btn-sm">記録する →</span>
+                <div>
+                  <span className="meta" style={{ display: "block", marginBottom: 3 }}>{nextTodo ? "次の記録" : "今日の記録"}</span>
+                  <b style={{ fontSize: "1.15rem" }}>{nextTodo?.label ?? "すべて完了しました"}</b>
+                </div>
+                <span className="btn btn-primary btn-sm">{nextTodo ? "記録する →" : "確認する →"}</span>
               </div>
               <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
                 {todoList.map((t) => (
@@ -113,9 +125,7 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
                 ))}
               </div>
               <p className="meta" style={{ margin: "8px 0 0" }}>
-                {todoList.every((t) => t.done)
-                  ? "今日の記録は完了です。おつかれさまでした。"
-                  : `残り：${todoList.filter((t) => !t.done).map((t) => t.label).join("・")}`}
+                今日 {completedTodos}/{todoList.length} 完了{nextTodo ? " ・ 約20秒" : " ・ おつかれさまでした"}
               </p>
             </Link>
           </>
@@ -128,27 +138,25 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
             <div className="progress-row"><span>計量まで</span><b>{untilLabel(user.weighInAt)}</b></div>
           )}
           {/* 締切「目標日まで」はプロのみ（一般会員には出さない） */}
-          {isPro && targetDays != null && (
+          {isPro && !user.weighInAt && targetDays != null && (
             <div className="progress-row"><span>目標日まで</span><b>{targetDays}日</b></div>
           )}
           {!isPro && lost != null && lost > 0 && (
             <div className="progress-row"><span>スタートから</span><b style={{ color: "var(--green-bright)" }}>−{lost}<span className="unit">kg</span></b></div>
           )}
           {cw != null && <div className="progress-row"><span>現在体重</span><b>{round1(cw)}<span className="unit">kg</span></b></div>}
-          {user.targetWeight != null && <div className="progress-row"><span>目標体重</span><b>{user.targetWeight}<span className="unit">kg</span></b></div>}
-          {remain != null && <div className="progress-row"><span>{isPro ? "残り体重" : "目標まであと"}</span><b>{remain > 0 ? remain : 0}<span className="unit">kg</span></b></div>}
-          <div className="progress-row"><span>今週の運動回数</span><b>{week}<span className="unit">回</span></b></div>
-          <div className="progress-row"><span>連続記録日数</span><b>{streak}<span className="unit">日</span></b></div>
+          {goalToGo != null && (
+            <div className="progress-row">
+              <span>{isPro ? "計量目標まで" : "目標まで"}</span>
+              {goalReached
+                ? <b style={{ color: "var(--green-bright)" }}>目標到達</b>
+                : <b>あと {goalToGo}<span className="unit">kg</span></b>}
+            </div>
+          )}
         </div>
         <Link href="/u/mypage" className={user.targetWeight == null ? "btn btn-accent" : "btn btn-ghost"} style={{ marginTop: 4 }}>
           🎯 {user.targetWeight == null ? "目標体重を設定する" : "目標・設定を変更する"}
         </Link>
-
-        {/* 13-4 今日の状態 */}
-        <p className="kicker">今日の状態</p>
-        <div className="status-grid">
-          {tiles.map((t) => <StatusTile key={t.lbl} tile={t} />)}
-        </div>
 
         {/* 進行中だけ再開入口を出す。未開始時は記録画面から開始する。 */}
         {isPro && (() => {
@@ -159,14 +167,19 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
             const { pct } = acuteLoss(period.baselineWeight, cur);
             const tone = pct >= 5 ? "red" : pct >= 2 ? "yellow" : "blue";
             const rem = round1(cur - period.targetWeight);
+            const phase = waterCutPhase(period);
             return (
               <>
-                <p className="kicker">進行中の計量準備</p>
-                <Link href="/u/watercut" className="card" style={{ display: "block", color: "var(--ink)", borderColor: "var(--blue)" }}>
-                  <div className="row"><b>計量準備を続ける</b><span className={`sig sig-${tone}`}>開始から −{pct}%</span></div>
-                  <div className="progress-row"><span>計量まで残り</span><b>あと {rem > 0 ? rem : 0}kg</b></div>
-                  <div className="progress-row"><span>計量まで</span><b>{untilLabel(period.weighInDatetime)}</b></div>
-                  <p className="small" style={{ marginBottom: 0, color: "var(--blue)" }}>続きの記録を開く ›</p>
+                <p className="kicker">計量準備</p>
+                <Link href="/u/watercut" className="card" style={{ display: "block", color: "var(--ink)", borderColor: tone === "red" ? "var(--red)" : tone === "yellow" ? "var(--yellow)" : "var(--blue)", padding: "14px 16px" }}>
+                  <div className="row" style={{ alignItems: "center" }}>
+                    <div>
+                      <b>計量準備・{phase === "loading" ? "ローディング中" : phase === "cut" ? "水抜き中" : phase === "weighin" ? "計量中" : "リカバリー中"}</b>
+                      <p className="small" style={{ margin: "5px 0 0" }}>計量まで {untilLabel(period.weighInDatetime)} ・ 開始から {pct > 0 ? `−${pct}` : `+${Math.abs(pct)}`}%</p>
+                    </div>
+                    <span style={{ color: "var(--muted)", fontSize: "1.35rem" }}>›</span>
+                  </div>
+                  {period.targetWeight < period.baselineWeight && rem <= 0 && <p className="small" style={{ margin: "8px 0 0", color: "var(--green-bright)" }}>計量目標に到達しています</p>}
                 </Link>
               </>
             );
