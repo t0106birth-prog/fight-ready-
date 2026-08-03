@@ -73,6 +73,7 @@ export async function canView(actor: User, targetId: string): Promise<boolean> {
   const db = await getDb();
   const target = db.users.find((u) => u.id === targetId);
   if (!target || target.gymId !== actor.gymId) return false;
+  if (target.role === "staff") return false; // スタッフ同士の詳細は見せない（本人は上で許可）
   return isStaff(actor);
 }
 

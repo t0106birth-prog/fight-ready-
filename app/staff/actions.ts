@@ -16,10 +16,13 @@ export async function resetUserPasswordAction(formData: FormData): Promise<void>
   const pw = String(formData.get("password") || "");
   if (!(await canView(staff!, userId))) redirect("/staff");
   if (pw.length < 6) redirect(`/staff/user/${userId}?pw=short`);
+  let done = false;
   await mutateDb((d) => {
-    const u = d.users.find((x) => x.id === userId && x.gymId === staff!.gymId && x.role !== "staff");
-    if (u) u.passwordHash = bcrypt.hashSync(pw, 8);
+    const u = d.users.find((x) => x.id === userId && x.gymId === staff!.gymId && (x.role === "pro" || x.role === "member"));
+    if (u) { u.passwordHash = bcrypt.hashSync(pw, 8); done = true; }
   });
+  // 会員/選手が見つからなければ、成功表示も監査ログも残さない（偽の成功を防ぐ）
+  if (!done) redirect(`/staff/user/${userId}?pw=notfound`);
   await history(staff!.gymId, staff!.id, "reset_password", userId);
   redirect(`/staff/user/${userId}?pw=ok`);
 }

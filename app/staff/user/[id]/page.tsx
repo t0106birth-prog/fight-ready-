@@ -86,6 +86,7 @@ export default async function UserDetail({ params, searchParams }: { params: Pro
           <b>🔑 パスワード再設定</b>
           {sp.pw === "ok" && <div className="sig sig-green" style={{ marginTop: 4 }}>再設定しました。新しいパスワードを本人に伝えてください。</div>}
           {sp.pw === "short" && <div className="field-error" style={{ marginTop: 4 }}>パスワードは6文字以上にしてください。</div>}
+          {sp.pw === "notfound" && <div className="field-error" style={{ marginTop: 4 }}>この利用者には再設定できませんでした。</div>}
           <form action={resetUserPasswordAction} style={{ marginTop: 6 }}>
             <input type="hidden" name="userId" value={id} />
             <input name="password" type="text" autoComplete="off" placeholder="新しい仮パスワード（6文字以上）" minLength={6} required />
