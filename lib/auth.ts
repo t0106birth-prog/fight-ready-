@@ -19,6 +19,11 @@ export interface Session {
   userId: string;
   gymId: string;
   role: Role;
+  /** マルチロール基盤（Phase 1・任意）。UIの表示状態のみ。認可はCookieのこの値だけで判断せず、
+   *  毎回DBのMembership/Assignmentを再確認する。未設定の既存Cookieは従来どおり動く。 */
+  activeMode?: "user" | "coach" | "staff";
+  activeWorkspaceId?: string;
+  activeMembershipId?: string;
 }
 
 function sign(payload: string): string {

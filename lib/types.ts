@@ -378,6 +378,53 @@ export interface LoginRecord {
   createdAt: string;
 }
 
+/* ───────── マルチロール基盤（Phase 1・追加のみ / 既存Role・gymIdは非削除） ───────── */
+
+/**
+ * スペース（所属の器）。ジム or 個人パーソナル。
+ * 既存 Gym は削除せず、type:"gym" の Workspace として後方互換に扱える。
+ */
+export interface Workspace {
+  id: string;
+  name: string;
+  type: "gym" | "personal";
+  ownerId: string;              // このスペースの持ち主(User.id)
+  status: "active" | "suspended";
+  inviteCode: string;           // 顧客/スタッフ招待用（十分なランダム性）
+  legacyGymId?: string;         // 既存Gymから作った場合の元GymId（互換用）
+  /** 課金（Stripe）。未契約は未設定のまま。ジムのシート課金と同型。今回は未使用。 */
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  billingStatus?: Gym["billingStatus"];
+  billingQuantity?: number;
+  billingUpdatedAt?: string;
+  createdAt: string;
+}
+
+/** 人 × スペース × 権限。同じUserが複数持てる。 */
+export interface Membership {
+  id: string;
+  userId: string;
+  workspaceId: string;
+  role: "client" | "coach" | "staff" | "owner";
+  status: "invited" | "active" | "suspended";
+  createdAt: string;
+}
+
+/** 共有する記録の範囲（本人が同意した範囲だけコーチが見られる）。 */
+export type CoachScope = "weight" | "activity" | "nutrition" | "condition" | "pain";
+
+/** コーチ ↔ 担当顧客の紐付け。承認前は status:"invited"。 */
+export interface CoachClientAssignment {
+  id: string;
+  workspaceId: string;
+  coachUserId: string;
+  clientUserId: string;
+  status: "invited" | "active" | "revoked";
+  sharedScopes: CoachScope[];
+  createdAt: string;
+}
+
 /** ストア全体 */
 export interface DB {
   gyms: Gym[];
@@ -400,4 +447,8 @@ export interface DB {
   followupLogs: FollowupLog[];
   history: HistoryRecord[];
   logins: LoginRecord[];
+  /** マルチロール基盤（Phase 1・後方互換で追加）。既存保存データには無いので store 側で [] 補完する。 */
+  workspaces: Workspace[];
+  memberships: Membership[];
+  coachAssignments: CoachClientAssignment[];
 }
