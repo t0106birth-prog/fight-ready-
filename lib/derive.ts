@@ -1,6 +1,6 @@
 /** 画面表示用の派生値の計算（ホーム・スタッフ一覧で共用）。 */
-import type { DB, User } from "./types";
-import { addDays, businessDate, daysBetween, round1, signed, todayStr, weekStart, untilLabel } from "./calc";
+import type { DB, User, WaterCutPeriod } from "./types";
+import { addDays, businessDate, daysBetween, hoursBetweenIso, round1, signed, todayStr, weekStart, untilLabel } from "./calc";
 import { dailyVerdict, weightProgress, acuteLoss, type Signal } from "./judge";
 
 /** 試合当日か（選手のみ）。この日は記録オフにして試合に集中させる。 */
@@ -33,7 +33,7 @@ export function currentWeight(db: DB, user: User): number | null {
   return latestDaily?.weight ?? user.startWeight ?? null;
 }
 
-/** 連続記録日数（朝チェックが連続している日数） */
+/** 連続記録日数（今日のチェックが連続している日数） */
 export function streakDays(db: DB, userId: string): number {
   const dates = new Set(db.dailyCheckins.filter((c) => c.userId === userId).map((c) => c.date));
   let n = 0;
@@ -94,6 +94,50 @@ export function latestWaterCutLog(db: DB, userId: string, periodId: string) {
 export function latestHydration(db: DB, userId: string, periodId: string) {
   return db.hydrationLogs.filter((l) => l.userId === userId && l.periodId === periodId)
     .sort((a, b) => (a.recordedDatetime < b.recordedDatetime ? 1 : -1))[0] ?? null;
+}
+
+/**
+ * 過去（または進行中）の計量準備1件の要約(§8)。表示専用で保存データは書き換えない。
+ * ・減少率の基準は水抜き開始後は cutBaselineWeight、なければ baselineWeight。
+ * ・最大減少率は最後のログではなく期間内の全ログ（＋実測計量値）の最小体重から計算。
+ * ・実測計量体重(actualWeighInWeight)があれば最終計量体重として優先。
+ * ・症状が記録された回数（HYDRO・計量後回復のうち症状ありの件数）。
+ * ・存在しないデータは推測しない（null / 0 を返す）。
+ */
+export interface PeriodSummary {
+  base: number;
+  finalWeight: number;
+  maxLossKg: number;
+  maxLossPct: number;
+  actualWeighInWeight: number | null;
+  symptomCount: number;
+  hours: number | null;
+}
+export function periodSummary(db: DB, period: WaterCutPeriod): PeriodSummary {
+  const base = period.cutBaselineWeight ?? period.baselineWeight;
+  const logs = db.waterCutLogs.filter((l) => l.periodId === period.id)
+    .sort((a, b) => (a.recordedDatetime < b.recordedDatetime ? -1 : 1));
+  const lastLog = logs[logs.length - 1];
+  const finalWeight = period.actualWeighInWeight ?? lastLog?.currentWeight ?? period.baselineWeight;
+  const candidateWeights = [
+    ...logs.map((l) => l.currentWeight),
+    ...(period.actualWeighInWeight != null ? [period.actualWeighInWeight] : []),
+  ];
+  const minWeight = candidateWeights.length ? Math.min(...candidateWeights) : base;
+  const maxLoss = acuteLoss(base, minWeight);
+  const symptomCount =
+    db.hydrationLogs.filter((h) => h.periodId === period.id && (h.symptoms?.length ?? 0) > 0).length +
+    db.weighInRecoveries.filter((r) => r.periodId === period.id && (r.symptoms?.length ?? 0) > 0).length;
+  const hours = lastLog ? Math.round(hoursBetweenIso(period.startDatetime, lastLog.recordedDatetime)) : null;
+  return {
+    base,
+    finalWeight: round1(finalWeight),
+    maxLossKg: maxLoss.kg,
+    maxLossPct: maxLoss.pct,
+    actualWeighInWeight: period.actualWeighInWeight ?? null,
+    symptomCount,
+    hours,
+  };
 }
 
 export interface Tile { lbl: string; val: string; tone: Signal }

@@ -87,7 +87,7 @@ export type Motivation = "yes" | "normal" | "no";
 export type Sluggish = "none" | "some" | "strong"; // だるさ
 export type PainLevelWord = "none" | "some" | "strong";
 
-/** 朝のチェック(§14) + 体重(§46 daily_checkins, weight_logs を1レコードに) */
+/** 今日のチェック(§14) + 体重(§46 daily_checkins, weight_logs を1レコードに) */
 export interface DailyCheckin {
   id: string;
   gymId: string;
@@ -205,6 +205,10 @@ export interface WaterCutPeriod {
   weighInStartedAt?: string;
   actualWeighInWeight?: number;
   weighedInAt?: string;
+  /** 終了時の任意の振り返りメモ(§4-1)。未入力の旧データは undefined のまま（後方互換） */
+  reviewWentWell?: string;      // うまくいったこと
+  reviewDifficulties?: string;  // 困ったこと
+  reviewNextChanges?: string;   // 次回変えること
   createdAt: string;
 }
 

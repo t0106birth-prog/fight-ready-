@@ -8,19 +8,21 @@ import { StatusTile } from "@/components/StatusTile";
 import { SubmitButton } from "@/components/SubmitButton";
 import { WaterCutGuide } from "@/components/WaterCutGuide";
 import { WaterCutPhaseBar } from "@/components/WaterCutPhaseBar";
+import { PhaseSafetyTips } from "@/components/PhaseSafetyTips";
 import { LineChart, type CPoint } from "@/components/Chart";
 import { OwnerField } from "@/components/OwnerField";
 import { finishWaterCutAction, startCutPhaseAction, revertToLoadingAction, startWeighInPhaseAction, saveActualWeighInAction } from "@/app/u/actions";
 import { acuteLoss, acuteLossBand, hydroBand, oneHydroBand, oneReadyVerdict, waterCutTable } from "@/lib/judge";
-import { activeWaterCut, currentWeight, latestWaterCutLog, latestHydration, waterCutPhase } from "@/lib/derive";
+import { activeWaterCut, currentWeight, latestWaterCutLog, latestHydration, waterCutPhase, periodSummary } from "@/lib/derive";
 import { untilLabel, round1, fmtDateTime, hoursBetweenIso, signed, businessDate } from "@/lib/calc";
+import { EMERGENCY_SYMPTOMS } from "@/lib/constants";
 import { today } from "@/lib/store";
 
 const bandClass: Record<string, string> = { red: "alert-red", yellow: "alert-yellow", blue: "alert-blue", green: "alert-green" };
 
 const PHASE_GUIDE: Record<string, string> = {
   loading: "水分量・体重・体調の変化を記録し、異常があればスタッフへ伝えてください。",
-  cut: "水を絞る時期。食事は少し戻してOK。体調を最優先に。",
+  cut: "水抜き中です。体重と症状を記録し、体調を最優先にしてください。",
   weighin: "計量おつかれさま。次はリカバリーです。",
   recovery: "計量後の回復を記録すると、この準備を終えられます。",
   done: "",
@@ -84,6 +86,7 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
   const hydro = latestHydration(db, user.id, period.id);
   const symptoms = [...new Set([...(todayCheck?.dangerSymptoms ?? []), ...(hydro?.symptoms ?? [])])];
   const hasSymptom = symptoms.length > 0;
+  const hasEmergency = symptoms.some((s) => EMERGENCY_SYMPTOMS.includes(s));
   const hydrationCaution = todayCheck?.hydrationThirst === "strong" || todayCheck?.urineVolumeStatus === "very_low";
 
   const band = acuteLossBand(pct, hasSymptom);
@@ -125,17 +128,12 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
   });
   const rapid = paceRows.length > 0 && paceRows[paceRows.length - 1].perHour != null && paceRows[paceRows.length - 1].perHour! >= 0.5;
 
+  // 過去の準備の要約（表示専用）。水抜き開始後は cutBaseline 基準、最大減少率は全ログから、実測計量値を優先。
   const pastSummaries = db.waterCutPeriods
     .filter((p) => p.userId === user.id && p.id !== period.id)
     .sort((a, b) => (a.startDatetime < b.startDatetime ? 1 : -1))
     .slice(0, 3)
-    .map((p) => {
-      const pLogs = db.waterCutLogs.filter((l) => l.periodId === p.id).sort((a, b) => (a.recordedDatetime < b.recordedDatetime ? 1 : -1));
-      const finalW = pLogs[0]?.currentWeight ?? p.baselineWeight;
-      const a = acuteLoss(p.baselineWeight, finalW);
-      const hours = pLogs[0] ? Math.round(hoursBetweenIso(p.startDatetime, pLogs[0].recordedDatetime)) : null;
-      return { id: p.id, date: businessDate(new Date(p.weighInDatetime)), kg: a.kg, pct: a.pct, hours };
-    });
+    .map((p) => ({ id: p.id, date: businessDate(new Date(p.weighInDatetime)), summary: periodSummary(db, p) }));
 
   return (
     <>
@@ -184,11 +182,19 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
           </form>
         )}
 
-        {/* 安全アラート（あるときだけ主張する） */}
+        {/* 安全アラート（あるときだけ主張する）。症状は減少率が低くても赤。 */}
         {hasSymptom && (
           <div className="alert-band alert-red">
-            <div className="at">強い体調異常が入力されています</div>
-            続ける前にスタッフへ伝え、必要に応じて医療機関へ相談してください。（{symptoms.join("・")}）
+            <div className="at">危険な症状があります</div>
+            減量・水抜きを中止し、周囲の人へ知らせてください。重い症状や意識障害がある場合は、直ちに救急要請を検討してください。（{symptoms.join("・")}）
+            {hasEmergency && <div style={{ marginTop: 6, fontWeight: 800 }}>🚑 緊急性の高い症状です。ためらわず救急要請（119）を検討してください。</div>}
+          </div>
+        )}
+        {/* 5%以上は折りたたみの中だけでなく、常に上部で赤警告する（§5） */}
+        {pct >= 5 && (
+          <div className="alert-band alert-red">
+            <div className="at">5%以上の急性減少です</div>
+            危険域のため、これ以上進める前に専門家へ確認してください。（いま {lossPctLabel}）
           </div>
         )}
         {hydrationCaution && !hasSymptom && (
@@ -224,9 +230,21 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
           <StatusTile tile={{ lbl: "計量まで", val: untilLabel(period.weighInDatetime), tone: "blue" }} />
         </div>
 
-        {/* 今のフェーズの一言ガイド（水と食事） */}
+        {/* 今のフェーズの一言ガイド */}
         {PHASE_GUIDE[phase] && (
           <div className="alert-band alert-blue"><div className="at">👉 今のフェーズ</div>{PHASE_GUIDE[phase]}</div>
+        )}
+
+        {/* 今日のポイント：現在フェーズの安全案内（重要2件＋すべて見る）。赤警告があれば上に出す。 */}
+        {phase !== "done" && (
+          <PhaseSafetyTips
+            phase={phase}
+            redWarning={hasSymptom
+              ? "危険な症状があります。減量・水抜きを中止し、周囲の人へ知らせてください。"
+              : pct >= 5
+                ? "5%以上の急性減少です。これ以上進める前に専門家へ確認してください。"
+                : null}
+          />
         )}
 
         {/* 今日の記録（体重＋水分量＋電解質） */}
@@ -253,29 +271,6 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
                 <p className="info-note mt0">薄い帯の部分が「水抜き」期間です。ローディングで上がり、水抜きで下がる流れが見えます。</p>
                 <LineChart points={chartPoints} hLine={{ y: period.targetWeight, label: `目標 ${period.targetWeight}kg` }} band={chartBand} height={180} />
               </div>
-            )}
-
-            {/* ウォーターローディングの目安（参考）：体重5kg刻み */}
-            {phase === "loading" && (
-              <details className="card tight">
-                <summary><b>ウォーターローディングの目安（参考）</b></summary>
-                <div style={{ marginTop: 8 }}>
-                  <p className="meta mt0">一般的なウォーターローディングは <b>体重×約60〜100mL/日</b> が目安とされます（参考であり、飲む量の指示ではありません）。</p>
-                  <table className="reftable">
-                    <thead><tr><th>体重</th><th>1日の目安（約）</th></tr></thead>
-                    <tbody>
-                      <tr style={{ outline: "2px solid var(--blue)" }}>
-                        <td className="k">あなた {round1(effBaseline)}kg</td>
-                        <td><b>{round1(effBaseline * 0.06)}〜{round1(effBaseline * 0.1)}L</b></td>
-                      </tr>
-                      {Array.from({ length: 12 }, (_, i) => 45 + i * 5).map((w) => (
-                        <tr key={w}><td className="k">{w}kg</td><td>{round1(w * 0.06)}〜{round1(w * 0.1)}L</td></tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <p className="info-note">大量に飲むときは<b>電解質も一緒に</b>。体調（頭痛・吐き気・むくみ等）を最優先に、無理はしないでください。</p>
-                </div>
-              </details>
             )}
 
             {/* 水抜きの目安（参考）：ローディングと揃えて水抜き期にも置く */}
@@ -398,10 +393,17 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
             {pastSummaries.length > 0 && (
               <>
                 <p className="kicker">前回までの実績（あなた自身）</p>
-                {pastSummaries.map((s) => (
-                  <div className="progress-row" key={s.id} style={{ fontSize: 13 }}>
-                    <span>{s.date} 計量</span>
-                    <span><b>{signed(-s.kg, "kg")}（{signed(-s.pct, "%")}）</b>{s.hours != null && <span className="meta"> ／ 約{s.hours}時間</span>}</span>
+                {pastSummaries.map((s, i) => (
+                  <div key={s.id} style={{ fontSize: 13, marginBottom: 10 }}>
+                    <div className="progress-row">
+                      <span>{s.date} 計量</span>
+                      <span><b>最大 {signed(-s.summary.maxLossPct, "%")}（{signed(-s.summary.maxLossKg, "kg")}）</b></span>
+                    </div>
+                    <div className="progress-row">
+                      <span className="meta">{s.summary.actualWeighInWeight != null ? `実測計量 ${round1(s.summary.actualWeighInWeight)}kg` : `最終記録 ${s.summary.finalWeight}kg`}</span>
+                      <span className="meta">{s.summary.symptomCount > 0 ? `症状記録 ${s.summary.symptomCount}回` : "症状記録なし"}</span>
+                    </div>
+                    {i === 0 && <Link href={`/u/history/${s.id}`} className="small">前回の計量準備を振り返る ›</Link>}
                   </div>
                 ))}
               </>
@@ -421,6 +423,15 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
         {period.status === "recovery" && (
           <form action={finishWaterCutAction} style={{ marginTop: 12 }}>
             <OwnerField id={user.id} />
+            <p className="kicker">振り返り（任意）</p>
+            <p className="info-note mt0">次回の準備に活かすためのメモです。空欄でも保存できます。</p>
+            <label className="fl" htmlFor="reviewWentWell">うまくいったこと</label>
+            <textarea id="reviewWentWell" name="reviewWentWell" rows={2} defaultValue={period.reviewWentWell ?? ""} />
+            <label className="fl" htmlFor="reviewDifficulties">困ったこと</label>
+            <textarea id="reviewDifficulties" name="reviewDifficulties" rows={2} defaultValue={period.reviewDifficulties ?? ""} />
+            <label className="fl" htmlFor="reviewNextChanges">次回変えること</label>
+            <textarea id="reviewNextChanges" name="reviewNextChanges" rows={2} defaultValue={period.reviewNextChanges ?? ""} />
+            <div style={{ height: 8 }} />
             <label className="check" style={{ marginBottom: 10 }}>
               <input type="checkbox" name="finishConfirmed" required />
               試合・回復記録が完了し、この準備を履歴へ保存することを確認しました

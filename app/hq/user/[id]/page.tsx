@@ -116,7 +116,7 @@ export default async function HqUserDetail({ params, searchParams }: { params: P
 
       <div className="grid2" style={{ marginTop: 8 }}>
         <div className="card tight">
-          <b>最近の朝チェック</b>
+          <b>最近の今日のチェック</b>
           {checks.map((c) => (
             <div className="progress-row" key={c.id} style={{ fontSize: 13 }}>
               <span>{fmtDate(c.date)}</span>

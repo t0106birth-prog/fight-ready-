@@ -22,7 +22,7 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
   const fightAt = waterCut?.fightDatetime ?? user.fightAt;
   const isFightDay = isPro && !!fightAt && businessDate(new Date(fightAt)) === businessDate();
   const saved = {
-    morning: "朝のチェックを保存しました",
+    morning: "今日のチェックを保存しました",
     check: "今日のチェックを記録しました",
     activity: "運動記録を保存しました",
     running: "ランニングを保存しました",
@@ -34,7 +34,7 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
     {
       href: "/u/record/morning",
       ico: "🌅",
-      label: "朝のチェック",
+      label: "今日のチェック",
       desc: waterCut ? "体重・睡眠・疲労・痛み（体重は水抜きにも自動で反映）" : "体重・睡眠・疲労・だるさ・痛み",
       done: todos.morning,
     },
@@ -94,7 +94,7 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
         </>
         ) : (
         <>
-        {/* 一般会員：1日1回の「今日のチェック」だけで主要記録が完了する。朝／夜の必須分割はしない。 */}
+        {/* 一般会員：1日1回の「今日のチェック」だけで主要記録が完了する。時間帯別の必須分割はしない。 */}
         <p className="kicker">今日のチェック</p>
         <Link href="/u/record/morning" className={`todo-item ${todos.morning ? "done" : ""}`}>
           <span className="tk" style={{ fontSize: 18 }}>{todos.morning ? "✓" : "📝"}</span>

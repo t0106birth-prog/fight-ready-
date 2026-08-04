@@ -8,7 +8,7 @@ import type { DailyCheckin, PainLog, RestDayLog, NutritionLog } from "@/lib/type
 
 /**
  * 一般会員の「今日のチェック」= 1日1回で主要記録を完了できる統合フォーム。
- * 朝・昼・夜のどの時間に開いても不自然にならない時間非依存の文言にする。
+ * どの時間帯に開いても不自然にならない時間非依存の文言にする。
  * 保存先は既存テーブルを再利用（DailyCheckin / PainLog / RestDayLog / NutritionLog）。
  * hidden memberCheck=1 を付け、saveMorningAction 側で運動・食事もまとめて保存する。
  */

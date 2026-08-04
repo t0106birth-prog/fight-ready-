@@ -61,7 +61,7 @@ export default async function MorningPage({ searchParams }: { searchParams: Prom
     : undefined;
   return (
     <>
-      <Hero title="朝のチェック" sub="15秒で完了" backHref="/u/record" />
+      <Hero title="今日のチェック" sub="15秒で完了" backHref="/u/record" />
       <div className="shell">
         {sp.error === "weight" && <div className="alert-band alert-red">体重は20〜300kgの範囲で入力してください。</div>}
         <MorningForm ownerId={user.id} defaultWeight={latestMeasured} waterCut={waterCut} defaults={todayCheck} painDefaults={painDefaults} />

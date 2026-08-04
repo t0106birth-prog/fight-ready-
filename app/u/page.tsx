@@ -55,7 +55,7 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
 
   // 一般会員は1日1回の「今日のチェック」だけで完了。プロは測定タイミングが重要なので従来の項目を維持。
   const todoList = isPro ? [
-    { key: "morning", label: "朝のチェック", href: "/u/record/morning", done: todos.morning },
+    { key: "morning", label: "今日のチェック", href: "/u/record/morning", done: todos.morning },
     { key: "activity", label: "運動記録", href: "/u/record/activity", done: todos.activity },
     { key: "nutrition", label: "食事達成度", href: "/u/record/nutrition", done: todos.nutrition },
     { key: "night", label: "夜の回復チェック", href: "/u/record/rest", done: todos.night },

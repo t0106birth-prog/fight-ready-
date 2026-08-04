@@ -4,8 +4,7 @@ import { SubmitButton } from "./SubmitButton";
 import { saveWeighInRecoveryAction } from "@/app/u/actions";
 import { OwnerField } from "@/components/OwnerField";
 import { toDateTimeLocal } from "@/lib/calc";
-
-const SYMPTOMS = ["吐き気", "腹痛", "頭痛", "だるさ"];
+import { RECOVERY_SYMPTOMS as SYMPTOMS } from "@/lib/constants";
 
 export function WeighInRecoveryForm({ ownerId, defaultWeighIn, lockWeighIn = false, minRecordedAt }: { ownerId: string; defaultWeighIn?: number; lockWeighIn?: boolean; minRecordedAt?: string }) {
   return (

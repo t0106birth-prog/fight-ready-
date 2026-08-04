@@ -158,10 +158,10 @@ export function WaterCutLogForm({ ownerId, defaultWeight, phase, loadingTarget }
       <label className="fl" htmlFor="waterIntake">
         今日の水分量（L）{loading && loadingTarget ? <span className="meta"> 目標 {loadingTarget}L</span> : null}
       </label>
-      <input id="waterIntake" name="waterIntake" type="number" min="0" max="20" step="0.1" inputMode="decimal" placeholder={loading ? "例：7.5（多めに）" : "例：1.0（絞る）"} />
+      <input id="waterIntake" name="waterIntake" type="number" min="0" max="20" step="0.1" inputMode="decimal" placeholder="実際に摂取した量" />
 
       <label className="check"><input type="checkbox" name="electrolyte" />電解質（経口補水液・塩分など）を摂った</label>
-      <p className="info-note mt0">大量に水を飲むときは、電解質も一緒に摂ると体調を崩しにくいです（量の指示はしません）。</p>
+      <p className="info-note mt0">飲水計画や電解質の摂取は、担当者と確認した内容に従ってください。</p>
 
       <SubmitButton className="btn btn-accent" pendingLabel="記録しています…">この記録を保存</SubmitButton>
     </form>

@@ -68,7 +68,7 @@ const numOrU = (f: FormData, k: string) => {
 };
 const validWeight = (v: number | null | undefined): v is number => v != null && Number.isFinite(v) && v >= 20 && v <= 300;
 
-/** 朝のチェック(§14) + 体重 + 痛み場所(§15) */
+/** 今日のチェック(§14) + 体重 + 痛み場所(§15) */
 export async function saveMorningAction(formData: FormData): Promise<void> {
   const u = await me();
   await assertOwner(formData, u);
@@ -139,7 +139,7 @@ export async function saveMorningAction(formData: FormData): Promise<void> {
       });
     }
 
-    // 水抜き中は朝の体重を同日の水抜きログにも反映し、二重入力を避ける。
+    // 水抜き中は今日の体重を同日の水抜きログにも反映し、二重入力を避ける。
     const period = d.waterCutPeriods.find((p) => p.userId === u.id && p.status === "active");
     if (period && checkin.weight != null) {
       const previousMorning = d.waterCutLogs
@@ -454,8 +454,17 @@ export async function finishWaterCutAction(formData: FormData): Promise<void> {
       formData.get("finishConfirmed") !== "on" || (period.fightDatetime && Date.now() < new Date(period.fightDatetime).getTime())) {
     redirect("/u/watercut?error=finish");
   }
+  // 終了時の任意の振り返りメモ（うまくいったこと・困ったこと・次回変えること）
+  const reviewWentWell = str(formData, "reviewWentWell") || undefined;
+  const reviewDifficulties = str(formData, "reviewDifficulties") || undefined;
+  const reviewNextChanges = str(formData, "reviewNextChanges") || undefined;
   await mutateDb((d) => {
-    d.waterCutPeriods.filter((p) => p.userId === u.id && p.status !== "done").forEach((p) => (p.status = "done"));
+    d.waterCutPeriods.filter((p) => p.userId === u.id && p.status !== "done").forEach((p) => {
+      p.status = "done";
+      if (reviewWentWell !== undefined) p.reviewWentWell = reviewWentWell;
+      if (reviewDifficulties !== undefined) p.reviewDifficulties = reviewDifficulties;
+      if (reviewNextChanges !== undefined) p.reviewNextChanges = reviewNextChanges;
+    });
   });
   await history(u.gymId, u.id, "watercut_finish");
   redirect("/u/history");

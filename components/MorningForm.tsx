@@ -80,7 +80,7 @@ export function MorningForm({ ownerId, defaultWeight, waterCut, defaults, painDe
         <label><input type="radio" name="pain" value="some" defaultChecked={defaults?.painLevel === "some"} />少しある</label>
         <label><input type="radio" name="pain" value="strong" defaultChecked={defaults?.painLevel === "strong"} />強い</label>
       </div>
-      <p className="info-note">毎朝、人型の図で身体を確認してください。痛みがなければ場所は選ばなくて大丈夫です。</p>
+      <p className="info-note">毎日、人型の図で身体を確認してください。痛みがなければ場所は選ばなくて大丈夫です。</p>
       <div style={{ marginTop: 10 }}>
         <BodyMap defaults={painDefaults} />
       </div>
