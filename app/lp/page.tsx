@@ -16,13 +16,6 @@ export default function LandingPage() {
           選手は自分の状態をチームに分け合い、ジムはみんなを見守り・支える。
         </p>
         <p className="brand-en">MAKE WEIGHT. STAY STRONG. FIGHT READY.</p>
-        <div style={{ maxWidth: 360, margin: "22px auto 0" }}>
-          <Link href="/" className="btn btn-accent">無料デモを見る</Link>
-          <div style={{ height: 10 }} />
-          <Link href="/register" className="btn btn-ghost">ジムで導入する</Link>
-          <div style={{ height: 10 }} />
-          <Link href="/login/user" className="btn btn-dark">ログイン</Link>
-        </div>
       </div>
 
       <div className="shell">
@@ -63,7 +56,7 @@ export default function LandingPage() {
           <p className="info-note mt0">
             本アプリは健康関連データ（体重・体調・痛みなど）を記録・保存します。医療診断は行わず、水抜き方法の指示もしません。症状が強い場合は医療専門職へ相談してください。
           </p>
-          <p className="center" style={{ marginBottom: 0 }}><Link href="/">← 入口・デモへ</Link></p>
+          <p className="center" style={{ marginBottom: 0 }}><Link href="/">← 入口へ</Link></p>
         </div>
       </div>
     </div>

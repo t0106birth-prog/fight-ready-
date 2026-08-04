@@ -72,15 +72,9 @@ a { color: var(--blue); text-decoration: none; }
 
 /* ── 入口 ── */
 .brand-hero {
-  text-align: center; padding: 40px 20px 34px; margin: 0 -16px 8px;
-  background: radial-gradient(120% 90% at 50% 0%, #1a212c 0%, #0a0d12 70%);
-  border-bottom: 2px solid var(--red); position: relative; overflow: hidden;
+  margin: 0 -16px 8px; padding: 0; position: relative; overflow: hidden; line-height: 0;
 }
-.brand-hero::before {
-  content: ""; position: absolute; inset: 0;
-  background: linear-gradient(115deg, transparent 0 47%, rgba(226,59,50,.14) 47% 50%, transparent 50%);
-  pointer-events: none;
-}
+.brand-hero-img { width: 100%; height: auto; display: block; }
 .brand-logo { font-size: 34px; font-weight: 900; font-style: italic; letter-spacing: .04em; text-transform: uppercase; line-height: 1; position: relative; }
 .brand-logo .r { color: var(--red); }
 .brand-tag { color: var(--ink); font-weight: 800; font-size: 16px; margin-top: 12px; }

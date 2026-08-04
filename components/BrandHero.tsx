@@ -29,7 +29,7 @@ export function BrandHero() {
         onClick={onLogo}
         className="brand-hero-img"
         draggable={false}
-        style={{ width: "100%", height: "auto", display: "block", borderRadius: 14, userSelect: "none", cursor: "pointer" }}
+        style={{ userSelect: "none", cursor: "pointer" }}
       />
     </div>
   );
