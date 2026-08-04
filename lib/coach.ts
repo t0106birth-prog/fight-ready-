@@ -20,9 +20,19 @@ export function coachWorkspaces(db: DB, userId: string): Workspace[] {
   return db.workspaces.filter((w) => w.type === "personal" && w.status === "active" && wsIds.has(w.id));
 }
 
-/** コーチモードを持っているか（隠し /coach への入場可否）。 */
+/** コーチモードを持っているか（/coach への入場可否）。 */
 export function hasCoachMode(db: DB, userId: string): boolean {
   return coachWorkspaces(db, userId).length > 0;
+}
+
+/** その人が active な owner Membership を持つ個人スペース（課金の“支払い主体”）。 */
+export function ownedPersonalWorkspaces(db: DB, userId: string): Workspace[] {
+  const wsIds = new Set(
+    db.memberships
+      .filter((m) => m.userId === userId && m.status === "active" && m.role === "owner")
+      .map((m) => m.workspaceId)
+  );
+  return db.workspaces.filter((w) => w.type === "personal" && w.status === "active" && wsIds.has(w.id));
 }
 
 /** このコーチの active な担当割当（自分の active スペースに属するものだけ）。 */

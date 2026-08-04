@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import type Stripe from "stripe";
-import { getStripe, applySubscriptionToGym } from "@/lib/stripe";
+import { getStripe, applySubscriptionToGym, applySubscriptionToWorkspace } from "@/lib/stripe";
 import { getDb } from "@/lib/store";
 
 // Stripe署名検証のため Node ランタイムで動かす（Edge不可）。
@@ -14,6 +14,24 @@ async function gymIdForSubscription(sub: Stripe.Subscription): Promise<string | 
   if (!customerId) return null;
   const db = await getDb();
   return db.gyms.find((g) => g.stripeCustomerId === customerId)?.id ?? null;
+}
+
+/** サブスクから個人スペースIDを特定（metadata優先、なければ顧客IDで照合）。 */
+async function workspaceIdForSubscription(sub: Stripe.Subscription): Promise<string | null> {
+  const metaWs = sub.metadata?.workspaceId;
+  if (metaWs) return metaWs;
+  const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
+  if (!customerId) return null;
+  const db = await getDb();
+  return db.workspaces.find((w) => w.stripeCustomerId === customerId)?.id ?? null;
+}
+
+/** スペース→ジムの順に宛先を解決して状態を反映（スペース優先）。 */
+async function applySub(sub: Stripe.Subscription): Promise<void> {
+  const wsId = await workspaceIdForSubscription(sub);
+  if (wsId) { await applySubscriptionToWorkspace(wsId, sub); return; }
+  const gymId = await gymIdForSubscription(sub);
+  if (gymId) await applySubscriptionToGym(gymId, sub);
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -34,11 +52,13 @@ export async function POST(req: NextRequest): Promise<Response> {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+        const wsId = session.metadata?.workspaceId;
         const gymId = session.metadata?.gymId;
-        if (gymId && session.subscription) {
+        if ((wsId || gymId) && session.subscription) {
           const subId = typeof session.subscription === "string" ? session.subscription : session.subscription.id;
           const sub = await stripe.subscriptions.retrieve(subId);
-          await applySubscriptionToGym(gymId, sub);
+          if (wsId) await applySubscriptionToWorkspace(wsId, sub);
+          else if (gymId) await applySubscriptionToGym(gymId, sub);
         }
         break;
       }
@@ -46,8 +66,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
-        const gymId = await gymIdForSubscription(sub);
-        if (gymId) await applySubscriptionToGym(gymId, sub);
+        await applySub(sub);
         break;
       }
       case "invoice.payment_failed":
@@ -57,8 +76,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         const subId = typeof subRef === "string" ? subRef : subRef?.id;
         if (subId) {
           const sub = await stripe.subscriptions.retrieve(subId);
-          const gymId = await gymIdForSubscription(sub);
-          if (gymId) await applySubscriptionToGym(gymId, sub);
+          await applySub(sub);
         }
         break;
       }

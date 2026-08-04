@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getDb } from "@/lib/store";
 import { Hero } from "@/components/Nav";
-import { coachWorkspaces, coachClients } from "@/lib/coach";
+import { coachWorkspaces, coachClients, ownedPersonalWorkspaces } from "@/lib/coach";
+import { monthlyAmountJpy } from "@/lib/billing";
+
+const yen = (n: number) => `¥${n.toLocaleString("ja-JP")}`;
 
 /**
  * パーソナルコーチ ダッシュボード（Phase 1・隠し）。
@@ -18,6 +21,7 @@ export default async function CoachHome() {
   if (spaces.length === 0) redirect("/u"); // コーチ権限なし → 隠す
 
   const clients = coachClients(db, user.id);
+  const isOwner = ownedPersonalWorkspaces(db, user.id).length > 0;
 
   return (
     <>
@@ -40,15 +44,23 @@ export default async function CoachHome() {
           <span className="d">共有を許可された記録だけを確認できます</span>
         </Link>
 
-        {/* お支払い（¥500 × 担当顧客数）は Phase 4 で実装予定。今は入口だけ・準備中表示。 */}
-        <p className="kicker">お支払い</p>
-        <div className="card tight" style={{ opacity: 0.65 }}>
-          <div className="row">
-            <b>お支払い（担当 {clients.length}名 × ¥500）</b>
-            <span className="badge badge-attn">準備中</span>
-          </div>
-          <p className="info-note mt0">月額の決済（Stripe）は準備中です。金額は担当顧客数に応じて自動計算されます。</p>
-        </div>
+        {/* お支払い（¥500 × 担当顧客数）。owner だけに出す。画面本体は設定内の /coach/billing。 */}
+        {isOwner && (
+          <>
+            <p className="kicker">お支払い</p>
+            <Link href="/coach/billing" className="card" style={{ display: "block", color: "var(--ink)", borderColor: "var(--blue)" }}>
+              <div className="row"><b>お支払い</b><span className="meta">開く ›</span></div>
+              <p className="small" style={{ margin: "5px 0 0", color: "var(--blue)" }}>担当 {clients.length}名 × ¥500 ＝ {yen(monthlyAmountJpy(clients.length))} / 月（目安）</p>
+            </Link>
+          </>
+        )}
+
+        <p className="kicker">設定</p>
+        <Link href="/coach/settings" className="todo-item">
+          <span className="tk" style={{ fontSize: 18 }}>⚙️</span>
+          <span className="tt">コーチ設定<br /><span className="meta" style={{ fontWeight: 400 }}>招待コード・お支払い</span></span>
+          <span className="ta">›</span>
+        </Link>
 
         <p className="info-note center" style={{ marginTop: 16 }}>
           <Link href="/u">← 選手・会員モードに戻る</Link>
