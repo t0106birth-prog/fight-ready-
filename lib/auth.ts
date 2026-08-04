@@ -99,3 +99,36 @@ export function homePath(role: Role): string {
 export async function requireUser(): Promise<User | null> {
   return currentUser();
 }
+
+/* ───────── パスワード再設定（本人セルフ・メール式） ───────── */
+
+const RESET_TTL_MS = 60 * 60 * 1000; // 60分で失効
+
+/**
+ * 署名付き再設定トークン。DB保存不要（ステートレス）。
+ * 現在の passwordHash を署名に含めるため、一度パスワードを変えると
+ * 過去のリンクは自動的に無効になる（実質ワンタイム）。
+ */
+export function makeResetToken(user: User): string {
+  const payload = Buffer.from(JSON.stringify({ uid: user.id, exp: Date.now() + RESET_TTL_MS })).toString("base64url");
+  return `${payload}.${sign(`${payload}.${user.passwordHash}`)}`;
+}
+
+/** 再設定トークンを検証し、有効なら対象ユーザーを返す（無効・期限切れは null）。 */
+export async function verifyResetToken(token: string): Promise<User | null> {
+  const [payload, sig] = (token || "").split(".");
+  if (!payload || !sig) return null;
+  let data: { uid?: string; exp?: number };
+  try {
+    data = JSON.parse(Buffer.from(payload, "base64url").toString());
+  } catch {
+    return null;
+  }
+  if (!data.uid || !data.exp || Date.now() > data.exp) return null;
+  const db = await getDb();
+  const user = db.users.find((u) => u.id === data.uid && u.status === "active");
+  if (!user) return null;
+  // 現在の passwordHash で署名照合（変更後の再利用を防ぐ）
+  if (sign(`${payload}.${user.passwordHash}`) !== sig) return null;
+  return user;
+}

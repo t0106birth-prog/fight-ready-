@@ -4,11 +4,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Notice } from "@/components/Notice";
 import { staffLoginAction } from "../actions";
 
-export default async function StaffLogin({ searchParams }: { searchParams: Promise<{ e?: string; email?: string }> }) {
+export default async function StaffLogin({ searchParams }: { searchParams: Promise<{ e?: string; email?: string; reset?: string }> }) {
   const sp = await searchParams;
   return (
     <div className="shell">
       <Hero title="ジムスタッフ ログイン" sub="選手と一般会員の状態を確認する" backHref="/" />
+      {sp.reset === "done" && (
+        <div className="alert-band alert-green"><b>✓</b> パスワードを再設定しました。新しいパスワードでログインしてください。</div>
+      )}
       {sp.e && <Notice>{sp.e}</Notice>}
       <form action={staffLoginAction} className="card">
         <label className="fl" htmlFor="email">メールアドレス</label>
@@ -23,7 +26,10 @@ export default async function StaffLogin({ searchParams }: { searchParams: Promi
         <SubmitButton className="btn btn-primary" pendingLabel="ログインしています…">ログイン</SubmitButton>
       </form>
       <p className="info-note">ジムスタッフは、所属ジムのすべての利用者を確認・管理できます。</p>
-      <p className="info-note mt0">パスワードを忘れたときは、管理者（本部）にご連絡ください。</p>
+      <p className="center small" style={{ marginBottom: 4 }}>
+        <Link href="/forgot-password"><b>パスワードを忘れた方はこちら</b></Link>
+      </p>
+      <p className="info-note mt0">メールでの再設定が使えないときは、管理者（本部）にご連絡ください。</p>
       <p className="center small">
         <Link href="/login/user">選手・一般会員の方はこちら</Link><br />
         <Link href="/">← 入口にもどる</Link>
