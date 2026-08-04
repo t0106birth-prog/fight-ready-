@@ -22,15 +22,15 @@ export function BrandHero() {
 
   return (
     <div className="brand-hero">
-      <div className="brand-logo" onClick={onLogo} style={{ userSelect: "none" }}>
-        FIGHT <span className="r">READY</span>
-      </div>
-      <div className="brand-tag">落とすだけでは、勝てない。</div>
-      <div className="brand-sub" style={{ color: "var(--ink)", fontWeight: 800, fontSize: 17, marginTop: 10 }}>
-        一人で戦わない。<span style={{ color: "var(--red-bright)" }}>チームで、仕上げる。</span>
-      </div>
-      <div className="brand-sub">体重・トレーニング・疲労・回復を、チームでひとつに。</div>
-      <div className="brand-en">MAKE WEIGHT. STAY STRONG. FIGHT READY.</div>
+      {/* デザイン版ヒーロー画像に差し替え。画像タップ2回で本部管理(HQ)へ（隠し扉①は維持） */}
+      <img
+        src="/brand-hero.jpg"
+        alt="FIGHT READY ― 落とすだけでは、勝てない。一人で戦わない。チームで、仕上げる。体重・トレーニング・疲労・回復を、チームでひとつに。"
+        onClick={onLogo}
+        className="brand-hero-img"
+        draggable={false}
+        style={{ width: "100%", height: "auto", display: "block", borderRadius: 14, userSelect: "none", cursor: "pointer" }}
+      />
     </div>
   );
 }
