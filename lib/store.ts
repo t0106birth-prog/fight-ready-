@@ -65,6 +65,18 @@ function supa(): SupabaseClient | null {
   return globalThis.__frSupa;
 }
 
+/**
+ * 後方互換の正規化。過去に保存された doc には新しい配列（workspaces 等）が無いため、
+ * 読み込み時に必ず [] で補完する。これが無いと db.workspaces が undefined でクラッシュする。
+ * 既存データは書き換えない（不足分を足すだけ）。
+ */
+function normalize(db: DB): DB {
+  db.workspaces ??= [];
+  db.memberships ??= [];
+  db.coachAssignments ??= [];
+  return db;
+}
+
 function loadFile(): DB | null {
   try {
     if (fs.existsSync(DB_PATH)) return JSON.parse(fs.readFileSync(DB_PATH, "utf-8")) as DB;
@@ -89,10 +101,10 @@ export async function getDb(): Promise<DB> {
     const { data, error } = await client.from(STORE_TABLE).select("doc").eq("id", STORE_ID).maybeSingle();
     if (!error) {
       if (data?.doc) {
-        globalThis.__frDb = data.doc as DB;
+        globalThis.__frDb = normalize(data.doc as DB);
         return globalThis.__frDb;
       }
-      const seeded = globalThis.__frDb ?? loadFile() ?? seed();
+      const seeded = normalize(globalThis.__frDb ?? loadFile() ?? seed());
       globalThis.__frDb = seeded;
       await client.from(STORE_TABLE).upsert({ id: STORE_ID, doc: seeded, updated_at: nowIso() });
       return seeded;
@@ -101,7 +113,7 @@ export async function getDb(): Promise<DB> {
     globalThis.__frSupaDown = Date.now();
   }
   if (!globalThis.__frDb) {
-    globalThis.__frDb = loadFile() ?? seed();
+    globalThis.__frDb = normalize(loadFile() ?? seed());
     saveFile(globalThis.__frDb);
   }
   return globalThis.__frDb;

@@ -16,6 +16,11 @@ export function billableCount(db: DB, gymId: string): number {
   ).length;
 }
 
+/** パーソナルコーチの請求対象人数（そのスペースの active な担当顧客）。単価はジムと同じ。 */
+export function coachBillableCount(db: DB, workspaceId: string): number {
+  return db.coachAssignments.filter((a) => a.workspaceId === workspaceId && a.status === "active").length;
+}
+
 /** 対象人数から月額（円）。 */
 export function monthlyAmountJpy(count: number): number {
   return count * PRICE_PER_ATHLETE_JPY;

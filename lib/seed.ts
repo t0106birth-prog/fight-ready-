@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import type {
   DB, User, Gym, DailyCheckin, PainLog, ActivityLog, RestDayLog,
   NutritionLog, WaterCutPeriod, WaterCutLog, HydrationLog, Camp, PtPlan,
-  PtSession, PtInquiry, AttendanceLog,
+  PtSession, PtInquiry, AttendanceLog, Workspace, Membership, CoachClientAssignment,
 } from "./types";
 
 const PW = "fight-2026"; // デモ共通パスワード
@@ -186,10 +186,27 @@ export function seed(): DB {
     { id: "pti-ichiro", gymId, userId: "u-ichiro", status: "wanted", createdAt: iso(-3) },
   ];
 
+  // マルチロール基盤（Phase 1・隠し）のデモ:
+  // 山田タケル(u-takeru)は「選手」でありながら、自分の個人パーソナルスペースの owner/coach。
+  // 担当顧客に鈴木一郎(u-ichiro)。/coach へ URL アクセスで確認できる（公開リンクは無し）。
+  const wsTakeru = "ws-takeru-personal";
+  const workspaces: Workspace[] = [
+    { id: wsTakeru, name: "山田タケル パーソナル", type: "personal", ownerId: "u-takeru", status: "active", inviteCode: "TKR-" + hash("takeru-invite").slice(7, 15).replace(/[^a-zA-Z0-9]/g, "x"), createdAt: iso(-20) },
+  ];
+  const memberships: Membership[] = [
+    { id: "mb-takeru-owner", userId: "u-takeru", workspaceId: wsTakeru, role: "owner", status: "active", createdAt: iso(-20) },
+    { id: "mb-takeru-coach", userId: "u-takeru", workspaceId: wsTakeru, role: "coach", status: "active", createdAt: iso(-20) },
+    { id: "mb-ichiro-client", userId: "u-ichiro", workspaceId: wsTakeru, role: "client", status: "active", createdAt: iso(-14) },
+  ];
+  const coachAssignments: CoachClientAssignment[] = [
+    { id: "ca-takeru-ichiro", workspaceId: wsTakeru, coachUserId: "u-takeru", clientUserId: "u-ichiro", status: "active", sharedScopes: ["weight", "activity", "nutrition", "condition"], createdAt: iso(-14) },
+  ];
+
   return {
     gyms, users, dailyCheckins, painLogs, activityLogs, runningLogs: [],
     restDayLogs, nutritionLogs, waterCutPeriods, waterCutLogs, hydrationLogs,
     weighInRecoveries: [], camps, ptPlans, ptSessions, ptInquiries,
     attendanceLogs, followupLogs: [], history: [], logins: [],
+    workspaces, memberships, coachAssignments,
   };
 }

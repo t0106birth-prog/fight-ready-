@@ -5,7 +5,7 @@
  */
 import Stripe from "stripe";
 import { getDb, mutateDb, nowIso } from "./store";
-import { billableCount, PRICE_PER_ATHLETE_JPY } from "./billing";
+import { billableCount, coachBillableCount, PRICE_PER_ATHLETE_JPY } from "./billing";
 import type { Gym } from "./types";
 
 let _stripe: Stripe | null | undefined;
@@ -24,6 +24,53 @@ export function athletePriceData(): Stripe.Checkout.SessionCreateParams.LineItem
     recurring: { interval: "month" },
     product_data: { name: "選手モニタリング（1名あたり月額）" },
   };
+}
+
+/** パーソナルコーチのチェックアウト明細（¥500/月 × 担当顧客数）。ジムと同単価。 */
+export function clientPriceData(): Stripe.Checkout.SessionCreateParams.LineItem.PriceData {
+  return {
+    currency: "jpy",
+    unit_amount: PRICE_PER_ATHLETE_JPY,
+    recurring: { interval: "month" },
+    product_data: { name: "パーソナル指導（1名あたり月額）" },
+  };
+}
+
+/** サブスク1件から個人スペースの課金状態・人数を保存する（表示専用の写し）。 */
+export async function applySubscriptionToWorkspace(workspaceId: string, sub: Stripe.Subscription): Promise<void> {
+  const qty = sub.items.data[0]?.quantity ?? undefined;
+  await mutateDb((d) => {
+    const w = d.workspaces.find((x) => x.id === workspaceId);
+    if (!w) return;
+    w.stripeSubscriptionId = sub.id;
+    if (typeof sub.customer === "string") w.stripeCustomerId = sub.customer;
+    w.billingStatus = sub.status === "canceled" || sub.status === "incomplete_expired" ? "canceled" : mapStatus(sub.status);
+    if (qty != null) w.billingQuantity = qty;
+    w.billingUpdatedAt = nowIso();
+  });
+}
+
+/** 個人スペースの請求人数を「今の担当顧客数」に合わせる。未設定・未契約なら何もしない。 */
+export async function syncPersonalBilling(workspaceId: string): Promise<{ ok: boolean; reason?: string; quantity?: number }> {
+  const stripe = getStripe();
+  if (!stripe) return { ok: false, reason: "unconfigured" };
+  const db = await getDb();
+  const ws = db.workspaces.find((w) => w.id === workspaceId);
+  if (!ws?.stripeSubscriptionId) return { ok: false, reason: "no_subscription" };
+  try {
+    const sub = await stripe.subscriptions.retrieve(ws.stripeSubscriptionId);
+    const item = sub.items.data[0];
+    if (!item) return { ok: false, reason: "no_item" };
+    const qty = coachBillableCount(db, workspaceId);
+    if (item.quantity !== qty) {
+      await stripe.subscriptionItems.update(item.id, { quantity: qty, proration_behavior: "create_prorations" });
+    }
+    const fresh = await stripe.subscriptions.retrieve(ws.stripeSubscriptionId);
+    await applySubscriptionToWorkspace(workspaceId, fresh);
+    return { ok: true, quantity: qty };
+  } catch {
+    return { ok: false, reason: "stripe_error" };
+  }
 }
 
 /** Stripeのサブスク状態をアプリの状態に写す。 */
