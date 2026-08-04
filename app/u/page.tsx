@@ -24,7 +24,8 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
   const verdict = dailyVerdict(db, user);
   const cw = currentWeight(db, user);
   const inquiry = db.ptInquiries.find((i) => i.userId === user.id && (i.status === "wanted" || i.status === "contacted"));
-  const camp = db.camps.find((c) => c.userId === user.id && c.status === "active");
+  // FIGHT CAMP（キャンプ機能）は一旦非表示。復活させるときはこの行と下のカード表示を戻す。
+  // const camp = db.camps.find((c) => c.userId === user.id && c.status === "active");
   // 試合当日は記録オフ（リカバリーだけ）。ホームでも案内する。
   const wcPeriod = activeWaterCut(db, user.id);
   const fightAt = wcPeriod?.fightDatetime ?? user.fightAt;
@@ -204,13 +205,14 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
           <div className="card"><div className="alert-band alert-blue" style={{ margin: 0 }}>パーソナル体験の希望を受付済みです。ジムスタッフからご案内します。</div></div>
         )}
 
+        {/* FIGHT CAMP（キャンプ機能）は一旦非表示。復活させるときはここと上の camp 定義を戻す。
         {camp && (
           <div className="card">
             <b>FIGHT CAMP</b>
             <p className="meta mt0">{camp.name}</p>
             <Link href="/u/personal" className="small">キャンプの進捗を見る ›</Link>
           </div>
-        )}
+        )} */}
 
         <Link href="/u/weekly" className="btn btn-ghost" style={{ marginTop: 14 }}>今週の振り返りを見る</Link>
       </div>
