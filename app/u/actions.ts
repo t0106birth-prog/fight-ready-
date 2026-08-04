@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { currentUser, setSession } from "@/lib/auth";
 import { getDb, mutateDb, uid, nowIso, today, appendRow, history } from "@/lib/store";
 import { acuteLoss } from "@/lib/judge";
+import { syncGymBilling } from "@/lib/stripe";
 import { businessDate, fromDateTimeLocal, hoursBetweenIso } from "@/lib/calc";
 import type {
   DailyCheckin, PainLog, ActivityLog, RunningLog, RestDayLog, NutritionLog,
@@ -53,6 +54,9 @@ export async function joinGymByCodeAction(formData: FormData): Promise<void> {
   });
   await setSession({ userId: u.id, gymId: gym!.id, role: u.role }, true);
   await history(gym!.id, u.id, "join_gym", gym!.code);
+  // 人数が変わったので、旧ジム・新ジムの請求人数をStripeに反映（未設定・未契約なら何もしない）
+  if (u.gymId && u.gymId !== gym!.id) await syncGymBilling(u.gymId);
+  await syncGymBilling(gym!.id);
   redirect("/u/mypage?saved=gym");
 }
 const str = (f: FormData, k: string) => String(f.get(k) || "").trim();

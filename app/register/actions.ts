@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { getDb, mutateDb, uid, nowIso, history } from "@/lib/store";
 import { setSession } from "@/lib/auth";
+import { syncGymBilling } from "@/lib/stripe";
 import type { CombatSport, Goal, User, UserType } from "@/lib/types";
 
 export async function registerAction(formData: FormData): Promise<void> {
@@ -94,6 +95,8 @@ export async function registerAction(formData: FormData): Promise<void> {
 
   await mutateDb((d) => d.users.push(user));
   await history(gymId, user.id, "register", userType);
+  // 新規登録でジムの対象人数が増えたら、請求人数をStripeに反映（未設定・未契約なら何もしない）
+  if (gymId) await syncGymBilling(gymId);
   await setSession({ userId: user.id, gymId, role: user.role }, true);
   redirect("/u");
 }

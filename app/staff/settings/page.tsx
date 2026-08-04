@@ -58,8 +58,20 @@ export default async function StaffSettings({ searchParams }: { searchParams: Pr
           <p className="info-note" style={{ wordBreak: "break-all", marginBottom: 0 }}>
             登録リンク：<br /><span style={{ color: "var(--blue)" }}>{inviteUrl}</span>
           </p>
-          <p className="info-note">選手・会員のアプリ利用は無料です。ジムは紐付いた人数に応じてご利用いただけます（課金は本番運用時に設定）。</p>
+          <p className="info-note">選手・会員のアプリ利用は無料です。ジムは紐付いた人数に応じてご利用いただけます。</p>
         </div>
+
+        {/* お支払い（Stripe） */}
+        <p className="kicker">お支払い</p>
+        <Link href="/staff/billing" className="card" style={{ display: "block", color: "var(--ink)" }}>
+          <div className="row">
+            <div>
+              <b>💳 お支払い・ご契約</b>
+              <p className="meta mt0" style={{ marginBottom: 0 }}>選手・会員 {memberCount}名 ・ 月額の確認とカード登録</p>
+            </div>
+            <span className="ta">›</span>
+          </div>
+        </Link>
 
         {/* ジムの基本情報を手動で編集 */}
         <p className="kicker">ジムの基本情報</p>

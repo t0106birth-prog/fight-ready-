@@ -32,6 +32,12 @@ export interface Gym {
   phone?: string;
   note?: string;
   suspended?: boolean;
+  /** 課金（Stripe）。未契約のジムは未設定のまま（後方互換）。 */
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  billingStatus?: "none" | "trialing" | "active" | "past_due" | "canceled" | "incomplete" | "unpaid";
+  billingQuantity?: number;   // Stripeに反映済みの請求人数（表示・差分検知用）
+  billingUpdatedAt?: string;
   createdAt: string;
 }
 
