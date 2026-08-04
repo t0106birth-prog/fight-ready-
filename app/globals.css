@@ -73,7 +73,6 @@ a { color: var(--blue); text-decoration: none; }
 /* ── 入口 ── */
 .brand-hero {
   margin: 0 -16px 8px; padding: 0; position: relative; overflow: hidden; line-height: 0;
-  border-bottom: 2px solid var(--red);
 }
 .brand-hero-img { width: 100%; height: auto; display: block; }
 .brand-logo { font-size: 34px; font-weight: 900; font-style: italic; letter-spacing: .04em; text-transform: uppercase; line-height: 1; position: relative; }
