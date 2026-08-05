@@ -9,7 +9,7 @@ import { dailyVerdict, acuteLoss } from "@/lib/judge";
 import { SubmitButton } from "@/components/SubmitButton";
 import { sportLabel, LV3, SLUGGISH } from "@/lib/constants";
 import { fmtDate, ageFrom, untilLabel, round1 } from "@/lib/calc";
-import { hqLinkGymAction, hqToggleUserAction } from "../../actions";
+import { hqLinkGymAction, hqToggleUserAction, hqStartViewAction } from "../../actions";
 
 /**
  * 本部（HQ）用の利用者詳細（全ジム横断・読み取り専用）。
@@ -57,6 +57,16 @@ export default async function HqUserDetail({ params, searchParams }: { params: P
         <SigBadge level={verdict.level} />
         <span className="meta">{verdict.reasons.slice(0, 2).join(" / ")}</span>
       </div>
+
+      {/* 選手（pro）のみ：本人が見るのと同じ画面を読み取り専用で開く */}
+      {user.role === "pro" && (
+        <form action={hqStartViewAction} style={{ marginTop: 10 }}>
+          <input type="hidden" name="userId" value={id} />
+          <SubmitButton className="btn btn-primary" pendingLabel="開いています…" style={{ width: "100%" }}>
+            🔎 この選手の画面を見る（読み取り専用）
+          </SubmitButton>
+        </form>
+      )}
 
       {/* 所属ジムの紐付け（無所属→ジム、別ジムへ移動も） */}
       {linkable && (

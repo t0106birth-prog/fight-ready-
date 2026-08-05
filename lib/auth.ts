@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createHmac } from "node:crypto";
 import { getDb } from "./store";
+import { hqViewAsUserId } from "./unlock";
 import type { Role, User } from "./types";
 
 const COOKIE = "fight_ready_session";
@@ -62,6 +63,14 @@ export async function getSession(): Promise<Session | null> {
 }
 
 export async function currentUser(): Promise<User | null> {
+  // 本部の「選手画面を閲覧」モード：fr_hq 解錠中は対象選手（pro）として表示する（読み取り専用）。
+  // 書き込みは middleware で遮断するため、ここでは表示のために対象ユーザーを返すだけ。
+  const viewAs = await hqViewAsUserId();
+  if (viewAs) {
+    const db = await getDb();
+    const target = db.users.find((x) => x.id === viewAs && x.status === "active" && x.role === "pro");
+    if (target) return target;
+  }
   const s = await getSession();
   if (!s) return null;
   const db = await getDb();

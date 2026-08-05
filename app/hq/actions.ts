@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
-import { codeMatches, grantUnlock, clearUnlock, hasUnlock } from "@/lib/unlock";
+import { codeMatches, grantUnlock, clearUnlock, hasUnlock, setHqViewAs } from "@/lib/unlock";
 import { getDb, mutateDb, history, uid, nowIso } from "@/lib/store";
 
 /**
@@ -20,6 +20,20 @@ export async function hqVerifyAction(formData: FormData): Promise<void> {
 export async function hqLogoutAction(): Promise<void> {
   await clearUnlock("fr_hq");
   redirect("/");
+}
+
+/**
+ * 本部が「その選手の画面」を読み取り専用で閲覧開始する。選手（pro）限定。
+ * 以後 /u の各ページが対象選手として表示され、書き込みは middleware で遮断される。
+ */
+export async function hqStartViewAction(formData: FormData): Promise<void> {
+  if (!(await hasUnlock("fr_hq"))) redirect("/hq");
+  const userId = String(formData.get("userId") || "");
+  const db = await getDb();
+  const target = db.users.find((u) => u.id === userId && u.status === "active" && u.role === "pro");
+  if (!target) redirect(`/hq/user/${userId}`);
+  await setHqViewAs(target!.id);
+  redirect("/u");
 }
 
 /** 本部から、選手/会員を任意のジムに紐付ける（無所属→ジム、別ジムへ移動も）。gymId="" で無所属に戻す。HQ解錠必須。 */

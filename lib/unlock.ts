@@ -55,3 +55,37 @@ export async function clearUnlock(cookieName: string): Promise<void> {
   const jar = await cookies();
   jar.delete(cookieName);
 }
+
+/* ───────── 本部「選手の画面を閲覧」モード（読み取り専用） ───────── */
+// fr_hq 解錠中の本部が、対象選手として /u の実ページをそのまま閲覧するための署名Cookie。
+// 書き込みは middleware で全遮断するため、このCookieは「表示の宛先」だけを持つ。
+export const HQ_VIEW_COOKIE = "fr_hq_view";
+
+export async function setHqViewAs(userId: string): Promise<void> {
+  const jar = await cookies();
+  jar.set(HQ_VIEW_COOKIE, `${userId}.${sign(`${HQ_VIEW_COOKIE}:${userId}`)}`, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: !!process.env.VERCEL || process.env.NODE_ENV === "production",
+    path: "/",
+  });
+}
+
+export async function clearHqViewAs(): Promise<void> {
+  const jar = await cookies();
+  jar.delete(HQ_VIEW_COOKIE);
+}
+
+/** 本部閲覧の対象userId。fr_hq 未解錠 or 署名不正なら null。 */
+export async function hqViewAsUserId(): Promise<string | null> {
+  if (!(await hasUnlock("fr_hq"))) return null;
+  const jar = await cookies();
+  const raw = jar.get(HQ_VIEW_COOKIE)?.value;
+  if (!raw) return null;
+  const idx = raw.lastIndexOf(".");
+  if (idx <= 0) return null;
+  const userId = raw.slice(0, idx);
+  const sig = raw.slice(idx + 1);
+  if (!safeEqual(sign(`${HQ_VIEW_COOKIE}:${userId}`), sig)) return null;
+  return userId;
+}
