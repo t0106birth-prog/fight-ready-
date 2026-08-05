@@ -82,6 +82,9 @@ export interface User {
   weighInType?: "same_day" | "day_before"; // 当日/前日計量
   pastCutExperience?: string;
   maxCutKg?: number;        // 過去最大の減量幅
+  /** パスワード再設定用の「合言葉」（メール不要のセルフ復旧）。答えはハッシュで保存。 */
+  recoveryQuestion?: string;
+  recoveryAnswerHash?: string;
   createdAt: string;
 }
 

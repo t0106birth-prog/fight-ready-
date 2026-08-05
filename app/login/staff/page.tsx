@@ -29,7 +29,7 @@ export default async function StaffLogin({ searchParams }: { searchParams: Promi
       <p className="center small" style={{ marginBottom: 4 }}>
         <Link href="/forgot-password"><b>パスワードを忘れた方はこちら</b></Link>
       </p>
-      <p className="info-note mt0">メールでの再設定が使えないときは、管理者（本部）にご連絡ください。</p>
+      <p className="info-note mt0">合言葉で再設定できないときは、管理者（本部）にご連絡ください。</p>
       <p className="center small">
         <Link href="/login/user">選手・一般会員の方はこちら</Link><br />
         <Link href="/">← 入口にもどる</Link>

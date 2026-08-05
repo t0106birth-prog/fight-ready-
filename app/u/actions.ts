@@ -1,9 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import bcrypt from "bcryptjs";
 import { currentUser, setSession } from "@/lib/auth";
 import { getDb, mutateDb, uid, nowIso, today, appendRow, history } from "@/lib/store";
 import { acuteLoss } from "@/lib/judge";
+import { normalizeRecoveryAnswer } from "@/lib/constants";
 import { syncGymBilling } from "@/lib/stripe";
 import { businessDate, fromDateTimeLocal, hoursBetweenIso } from "@/lib/calc";
 import type {
@@ -35,6 +37,25 @@ async function mePro() {
 async function assertOwner(formData: FormData, u: { id: string }) {
   const ownerId = str(formData, "ownerId");
   if (ownerId && ownerId !== u.id) redirect("/u?error=switched");
+}
+
+/** 合言葉（パスワード再設定用）を設定・変更する。答えはハッシュで保存。 */
+export async function setRecoveryAction(formData: FormData): Promise<void> {
+  const u = await me();
+  await assertOwner(formData, u);
+  const question = str(formData, "recoveryQuestion").trim();
+  const answerRaw = str(formData, "recoveryAnswer");
+  const answer = normalizeRecoveryAnswer(answerRaw);
+  if (!question || answer.length < 1) redirect("/u/mypage?e=recovery");
+  await mutateDb((d) => {
+    const user = d.users.find((x) => x.id === u.id);
+    if (user) {
+      user.recoveryQuestion = question;
+      user.recoveryAnswerHash = bcrypt.hashSync(answer, 8);
+    }
+  });
+  await history(u.gymId, u.id, "set_recovery");
+  redirect("/u/mypage?saved=recovery");
 }
 
 /** QR/コードでジムに参加（紐付け先を切り替える）。生コードでも /register?gym=CODE のURLでも受ける。 */

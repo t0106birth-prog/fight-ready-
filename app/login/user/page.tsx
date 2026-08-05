@@ -29,7 +29,7 @@ export default async function UserLogin({ searchParams }: { searchParams: Promis
       <p className="center small" style={{ marginBottom: 4 }}>
         <Link href="/forgot-password"><b>パスワードを忘れた方はこちら</b></Link>
       </p>
-      <p className="info-note mt0">メールでの再設定が使えないときは、所属ジムのスタッフに連絡すると再設定してもらえます。</p>
+      <p className="info-note mt0">合言葉が未設定などで再設定できないときは、所属ジムのスタッフに連絡すると再設定してもらえます。</p>
       <p className="center small">
         <Link href="/register">はじめての方（新規登録）</Link><br />
         <Link href="/login/staff">ジムスタッフの方はこちら</Link><br />

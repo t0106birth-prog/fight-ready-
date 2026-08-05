@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { getDb, mutateDb, uid, nowIso, history } from "@/lib/store";
 import { setSession } from "@/lib/auth";
 import { syncGymBilling } from "@/lib/stripe";
+import { normalizeRecoveryAnswer } from "@/lib/constants";
 import type { CombatSport, Goal, User, UserType } from "@/lib/types";
 
 export async function registerAction(formData: FormData): Promise<void> {
@@ -65,6 +66,9 @@ export async function registerAction(formData: FormData): Promise<void> {
     role: userType,
     name,
     status: "active",
+    // 合言葉（パスワード再設定用・メール不要）。答えはハッシュで保存。
+    recoveryQuestion: g("recoveryQuestion") || undefined,
+    recoveryAnswerHash: g("recoveryAnswer") ? bcrypt.hashSync(normalizeRecoveryAnswer(g("recoveryAnswer")), 8) : undefined,
     gender: (g("gender") || undefined) as User["gender"],
     birthDate: dt("birthDate"),
     heightCm,

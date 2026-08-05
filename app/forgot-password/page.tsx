@@ -7,32 +7,25 @@ export default async function ForgotPassword({ searchParams }: { searchParams: P
   const sp = await searchParams;
   return (
     <div className="shell">
-      <Hero title="パスワードを再設定" sub="ご登録のメールに再設定リンクを送ります" backHref="/login/user" />
+      <Hero title="パスワードを再設定" sub="合言葉（秘密の質問）で本人確認します" backHref="/login/user" />
 
-      {sp.state === "sent" && (
-        <div className="alert-band alert-green">
-          <div className="at">✓ 送信しました</div>
-          ご登録があれば、再設定用のリンクをメールでお送りしました（60分以内に有効）。メールが届かない場合は、迷惑メールフォルダもご確認ください。
-        </div>
-      )}
-      {sp.state === "unconfigured" && (
+      {sp.state === "noquestion" && (
         <div className="alert-band alert-yellow">
-          <div className="at">メール再設定は準備中です</div>
-          現在メールでの自動再設定が使えません。お手数ですが、<b>所属ジムのスタッフ</b>にご連絡ください。スタッフがパスワードを再設定できます。
+          <div className="at">この方法では再設定できません</div>
+          登録が見つからないか、<b>合言葉が未設定</b>です。合言葉は、ログイン後に「マイページ →🔒合言葉」から設定できます。
+          所属ジムがある場合は、スタッフにパスワード再設定を依頼することもできます。
         </div>
       )}
-      {sp.state === "input" && (
-        <div className="alert-band alert-red">メールアドレスを入力してください。</div>
-      )}
+      {sp.state === "input" && <div className="alert-band alert-red">メールアドレスを入力してください。</div>}
 
       <form action={requestPasswordResetAction} className="card">
         <label className="fl mt0" htmlFor="email">ご登録のメールアドレス</label>
         <input id="email" name="email" type="email" required autoComplete="username" placeholder="例: you@example.com" />
+        <p className="info-note mt0">次の画面で「合言葉（秘密の質問）」の答えを入力すると、新しいパスワードを設定できます。メールは使いません。</p>
         <div style={{ height: 12 }} />
-        <SubmitButton className="btn btn-accent" pendingLabel="送信しています…">再設定リンクを送る</SubmitButton>
+        <SubmitButton className="btn btn-accent" pendingLabel="確認しています…">次へ（合言葉で確認）</SubmitButton>
       </form>
 
-      <p className="info-note">セキュリティのため、リンクは60分で失効し、一度使うと無効になります。</p>
       <p className="center small">
         <Link href="/login/user">← ログインにもどる</Link>
       </p>

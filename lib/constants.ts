@@ -87,6 +87,21 @@ export const RED_SYMPTOMS: string[] = [
   "歩行が難しいほどの脱力", "排尿がほとんどない", "強い動悸", "強い筋けいれん", "急激な体調悪化",
 ];
 
+/** パスワード再設定用「合言葉」の質問候補。メール不要のセルフ復旧に使う。 */
+export const RECOVERY_QUESTIONS: string[] = [
+  "最初に習った格闘技は？",
+  "子どものころのあだ名は？",
+  "いちばん好きな選手・チームは？",
+  "初めて飼ったペットの名前は？",
+  "出身の小学校の名前は？",
+  "母親の旧姓は？",
+];
+
+/** 合言葉の答えの正規化（前後空白を除き小文字化。全角空白も対象）。 */
+export function normalizeRecoveryAnswer(s: string): string {
+  return (s || "").replace(/[\s　]+/g, "").toLowerCase();
+}
+
 /** 計量後リカバリーで記録する症状(§31)。既存データ（symptoms: string[]）と後方互換 */
 export const RECOVERY_SYMPTOMS: string[] = [
   "吐き気", "嘔吐", "下痢", "腹部膨満", "腹痛", "頭痛", "めまい", "動悸", "ぼんやりする", "だるさ", "その他",

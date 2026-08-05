@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { SubmitButton } from "./SubmitButton";
-import { SPORTS, GOALS } from "@/lib/constants";
+import { SPORTS, GOALS, RECOVERY_QUESTIONS } from "@/lib/constants";
 import { registerAction } from "@/app/register/actions";
 import type { Gym } from "@/lib/types";
 
@@ -37,6 +37,16 @@ export function RegisterForm({ gyms, presetGym }: { gyms: Gym[]; presetGym?: Gym
 
       <label className="fl" htmlFor="password">パスワード（6文字以上）</label>
       <input id="password" name="password" type="password" required minLength={6} autoComplete="new-password" />
+
+      {/* 合言葉：パスワードを忘れたときに本人が自分で再設定するための質問と答え（メール不要） */}
+      <label className="fl" htmlFor="recoveryQuestion">合言葉の質問（パスワードを忘れたとき用）</label>
+      <select id="recoveryQuestion" name="recoveryQuestion" defaultValue="" required>
+        <option value="" disabled>選んでください</option>
+        {RECOVERY_QUESTIONS.map((q) => <option key={q} value={q}>{q}</option>)}
+      </select>
+      <label className="fl" htmlFor="recoveryAnswer">その答え</label>
+      <input id="recoveryAnswer" name="recoveryAnswer" type="text" required autoComplete="off" placeholder="例：柔道" />
+      <p className="info-note mt0">パスワードを忘れたとき、この答えで自分で再設定できます。覚えやすく、他人に推測されにくいものに。</p>
 
       {/* 所属ジム：招待リンクなら固定。無ければコード or「なし」 */}
       {presetGym ? (

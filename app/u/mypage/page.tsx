@@ -3,12 +3,12 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getDb } from "@/lib/store";
 import { logoutAction } from "@/app/login/actions";
-import { updateProfileAction, switchToProAction, switchToMemberAction } from "@/app/u/actions";
+import { updateProfileAction, switchToProAction, switchToMemberAction, setRecoveryAction } from "@/app/u/actions";
 import { Hero, UserTabbar } from "@/components/Nav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { OwnerField } from "@/components/OwnerField";
 import { QrJoinForm } from "@/components/QrJoinForm";
-import { sportLabel, goalLabel, SPORTS } from "@/lib/constants";
+import { sportLabel, goalLabel, SPORTS, RECOVERY_QUESTIONS } from "@/lib/constants";
 import { currentWeight } from "@/lib/derive";
 import { round1, ageFrom, businessDate, daysUntil, toDateTimeLocalValue } from "@/lib/calc";
 
@@ -46,6 +46,8 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
       <Hero title="マイページ・目標体重を設定" sub={`${user.name}（${isPro ? "選手" : "一般会員"}）`} backHref="/u" />
       <div className="shell">
         {sp.saved === "profile" && <div className="alert-band alert-green"><b>✓</b> 設定を保存しました</div>}
+        {sp.saved === "recovery" && <div className="alert-band alert-green"><b>✓</b> 合言葉を設定しました。パスワードを忘れたときに使えます。</div>}
+        {sp.e === "recovery" && <div className="alert-band alert-red">質問と答えの両方を入力してください。</div>}
         {sp.saved === "gym" && <div className="alert-band alert-green"><b>✓</b> ジムに参加しました（{gym?.name}）</div>}
         {sp.e === "gymcode" && <div className="alert-band alert-red">チームコードが見つかりませんでした。コードを確認してください。</div>}
         {sp.error === "weight" && <div className="alert-band alert-red">体重は20〜300kgの範囲で入力してください。</div>}
@@ -212,6 +214,35 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
         {/* ジムに参加（QRカメラ / コード手入力） */}
         <p className="kicker">🏋️ ジムに参加・変更</p>
         <QrJoinForm currentGymName={gym?.name} ownerId={user.id} />
+
+        {/* 合言葉（パスワードを忘れたとき用・メール不要のセルフ復旧） */}
+        <p className="kicker">🔒 合言葉（パスワードを忘れたとき用）</p>
+        <div className="card">
+          <p className="mt0">
+            {user.recoveryQuestion
+              ? <>設定済み：<b>「{user.recoveryQuestion}」</b>（答えは表示されません）</>
+              : <b style={{ color: "var(--amber-ink)" }}>まだ未設定です。忘れたときの復旧のため、設定をおすすめします。</b>}
+          </p>
+          <p className="info-note mt0">パスワードを忘れたとき、この「質問と答え」で自分で再設定できます（メール不要）。答えは覚えやすく、他人に推測されにくいものにしてください。</p>
+          <form action={setRecoveryAction}>
+            <OwnerField id={user.id} />
+            <label className="fl" htmlFor="recoveryQuestion">合言葉の質問</label>
+            <select id="recoveryQuestion" name="recoveryQuestion" defaultValue={user.recoveryQuestion ?? ""} required>
+              <option value="" disabled>選んでください</option>
+              {RECOVERY_QUESTIONS.map((q) => <option key={q} value={q}>{q}</option>)}
+              {user.recoveryQuestion && !RECOVERY_QUESTIONS.includes(user.recoveryQuestion) && (
+                <option value={user.recoveryQuestion}>{user.recoveryQuestion}</option>
+              )}
+            </select>
+            <label className="fl" htmlFor="recoveryAnswer">答え</label>
+            <input id="recoveryAnswer" name="recoveryAnswer" type="text" autoComplete="off" required placeholder="例：柔道" />
+            <p className="info-note mt0">大文字・小文字・前後の空白は無視して照合します。</p>
+            <div style={{ height: 8 }} />
+            <SubmitButton className="btn btn-primary btn-sm" pendingLabel="保存しています…" style={{ width: "100%" }}>
+              {user.recoveryQuestion ? "合言葉を更新する" : "合言葉を設定する"}
+            </SubmitButton>
+          </form>
+        </div>
 
         {/* 変更しない基本情報 */}
         <p className="kicker">アカウント情報</p>
