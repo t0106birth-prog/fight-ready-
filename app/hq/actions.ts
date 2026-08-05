@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { codeMatches, grantUnlock, clearUnlock, hasUnlock } from "@/lib/unlock";
-import { getDb, mutateDb, history } from "@/lib/store";
+import { getDb, mutateDb, history, uid, nowIso } from "@/lib/store";
 
 /**
  * 本部（HQ）管理ページの暗証番号チェック。
@@ -72,6 +72,36 @@ export async function hqToggleUserAction(formData: FormData): Promise<void> {
   });
   await history("", undefined, "hq_toggle_user", userId);
   redirect(`/hq/user/${userId}?acct=1`);
+}
+
+/**
+ * 本部から、指定メールの利用者に「パーソナルコーチ権限」を付与する（初期オンボーディング/デモ用）。
+ * 個人パーソナルスペースを作り、本人へ owner+coach の Membership を付与する（担当顧客は招待から追加）。
+ * 既に owner スペースがあれば作り直さず coach 権限だけ補う（idempotent）。HQ解錠必須。
+ */
+export async function hqGrantCoachAction(formData: FormData): Promise<void> {
+  if (!(await hasUnlock("fr_hq"))) redirect("/hq");
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const db = await getDb();
+  const target = db.users.find((u) => u.email.toLowerCase() === email && u.status === "active");
+  if (!target) redirect("/hq?coach=notfound");
+  await mutateDb((d) => {
+    const u = d.users.find((x) => x.id === target!.id);
+    if (!u) return;
+    const ownerMs = d.memberships.filter((m) => m.userId === u.id && m.role === "owner" && m.status === "active");
+    let wsId = d.workspaces.find((w) => w.type === "personal" && w.status === "active" && ownerMs.some((m) => m.workspaceId === w.id))?.id;
+    if (!wsId) {
+      wsId = uid();
+      const code = uid().replace(/-/g, "").slice(0, 8).toUpperCase();
+      d.workspaces.push({ id: wsId, name: `${u.name} パーソナル`, type: "personal", ownerId: u.id, status: "active", inviteCode: `PC-${code}`, createdAt: nowIso() });
+      d.memberships.push({ id: uid(), userId: u.id, workspaceId: wsId, role: "owner", status: "active", createdAt: nowIso() });
+    }
+    if (!d.memberships.some((m) => m.userId === u.id && m.workspaceId === wsId && m.role === "coach" && m.status === "active")) {
+      d.memberships.push({ id: uid(), userId: u.id, workspaceId: wsId!, role: "coach", status: "active", createdAt: nowIso() });
+    }
+  });
+  await history("", undefined, "hq_grant_coach", target!.id);
+  redirect("/hq?coach=granted");
 }
 
 /** 本部からジムを停止/再開する（停止中はそのコードでの新規登録・参加を拒否）。HQ解錠必須。 */

@@ -66,6 +66,13 @@ export function scopeAllowed(a: CoachClientAssignment, scope: CoachScope): boole
   return a.sharedScopes.includes(scope);
 }
 
+/** 招待コードから active な個人スペースを引く（推測防止のため十分ランダムなコード前提）。 */
+export function workspaceByInviteCode(db: DB, code: string): Workspace | null {
+  const c = (code || "").trim();
+  if (!c) return null;
+  return db.workspaces.find((w) => w.type === "personal" && w.status === "active" && w.inviteCode === c) ?? null;
+}
+
 /** 表示用の共有範囲ラベル。 */
 export const SCOPE_LABEL: Record<CoachScope, string> = {
   weight: "体重",

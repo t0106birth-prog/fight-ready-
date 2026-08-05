@@ -5,13 +5,13 @@ import { sportLabel } from "@/lib/constants";
 import { dailyVerdict } from "@/lib/judge";
 import { fmtDateTime } from "@/lib/calc";
 import { SigBadge } from "@/components/SigBadge";
-import { hqVerifyAction, hqLogoutAction, hqResetPasswordAction, hqToggleGymAction, hqDeleteGymAction } from "./actions";
+import { hqVerifyAction, hqLogoutAction, hqResetPasswordAction, hqToggleGymAction, hqDeleteGymAction, hqGrantCoachAction } from "./actions";
 import { SubmitButton } from "@/components/SubmitButton";
 
 /**
  * 本部（HQ）管理ページ。暗証番号で解錠すると、全ジムと利用者の紐づけ一覧＋選手の中身を閲覧できる（簡易版）。
  */
-export default async function HqPage({ searchParams }: { searchParams: Promise<{ e?: string; pw?: string; gymdel?: string }> }) {
+export default async function HqPage({ searchParams }: { searchParams: Promise<{ e?: string; pw?: string; gymdel?: string; coach?: string }> }) {
   const sp = await searchParams;
   const unlocked = await hasUnlock("fr_hq");
   const db = unlocked ? await getDb() : null;
@@ -47,6 +47,18 @@ export default async function HqPage({ searchParams }: { searchParams: Promise<{
           <div className="alert-band alert-green" style={{ marginTop: 12 }}><b>🔓 解錠しました</b> — 本部管理ページ</div>
           {sp.gymdel === "1" && <div className="alert-band alert-green">ジムを削除しました。</div>}
           {sp.gymdel === "blocked" && <div className="alert-band alert-yellow">選手・会員が紐付いているジムは削除できません。先に別ジムへ移すか無所属にしてください。</div>}
+          {sp.coach === "granted" && <div className="alert-band alert-green"><b>✓ パーソナルコーチ権限を付与しました。</b> 対象の方はホームに「🧑‍🏫 パーソナルコーチモード」が出ます（再読み込み）。</div>}
+          {sp.coach === "notfound" && <div className="alert-band alert-yellow">そのメールの利用者が見つかりませんでした（active な選手・会員のメールを入力してください）。</div>}
+
+          {/* パーソナルコーチ権限の付与（初期オンボーディング/デモ用） */}
+          <p className="kicker">パーソナルコーチ権限</p>
+          <form action={hqGrantCoachAction} className="card tight">
+            <p className="info-note mt0">指定メールの利用者に「パーソナルコーチ」権限（個人スペース＋owner/coach）を付与します。担当顧客は招待から追加します。</p>
+            <label className="fl" htmlFor="coachEmail">メールアドレス</label>
+            <input id="coachEmail" name="email" type="email" placeholder="例：coach@example.com" required />
+            <div style={{ height: 8 }} />
+            <SubmitButton className="btn btn-primary" pendingLabel="付与しています…" style={{ width: "100%" }}>コーチ権限を付与する</SubmitButton>
+          </form>
 
           {/* 全体サマリ */}
           <p className="kicker">全体</p>

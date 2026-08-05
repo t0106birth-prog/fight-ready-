@@ -13,7 +13,7 @@ import { dailyVerdict, acuteLoss } from "@/lib/judge";
 import { hasCoachMode } from "@/lib/coach";
 import { daysUntil, round1, untilLabel, businessDate, fmtDate } from "@/lib/calc";
 
-export default async function UserHome({ searchParams }: { searchParams: Promise<{ rolechanged?: string; error?: string }> }) {
+export default async function UserHome({ searchParams }: { searchParams: Promise<{ rolechanged?: string; error?: string; joined?: string }> }) {
   const sp = await searchParams;
   const user = await currentUser();
   if (!user) redirect("/login/user");
@@ -97,11 +97,21 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
             <b>👀 チームが見守っています</b> — {fmtDate(lastAck.createdAt)} にスタッフがあなたの記録を確認しました。
           </div>
         )}
+        {sp.joined === "coach" && (
+          <div className="alert-band alert-green" style={{ margin: "0 0 10px" }}>
+            <b>✓ パーソナルコーチに参加しました</b> — 選んだ範囲の記録が担当コーチと共有されます。
+          </div>
+        )}
+        {sp.joined === "invalid" && (
+          <div className="alert-band alert-yellow" style={{ margin: "0 0 10px" }}>
+            招待コードが無効か、受付を終了していました。コーチにもう一度リンクを教えてもらってください。
+          </div>
+        )}
 
         {/* パーソナルコーチ権限がある人だけに出る入口。押すとコーチモード(/coach)へ。 */}
         {canCoach && (
           <Link href="/coach" className="card" style={{ display: "block", color: "var(--ink)", borderColor: "var(--blue)", margin: "0 0 10px" }}>
-            <div className="row"><b>🧑‍🏫 パーソナルコーチモード</b><span className="meta">切り替える ›</span></div>
+            <div className="row"><b>パーソナルコーチモード</b><span className="meta">切り替える ›</span></div>
             <p className="small" style={{ margin: "5px 0 0", color: "var(--blue)" }}>担当顧客の記録を見る（あなた自身の記録はこの選手・会員モードのまま）</p>
           </Link>
         )}
