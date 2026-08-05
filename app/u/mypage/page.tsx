@@ -8,7 +8,7 @@ import { Hero, UserTabbar } from "@/components/Nav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { OwnerField } from "@/components/OwnerField";
 import { QrJoinForm } from "@/components/QrJoinForm";
-import { sportLabel, goalLabel, SPORTS, RECOVERY_QUESTIONS } from "@/lib/constants";
+import { sportLabel, goalLabel, SPORTS, RECOVERY_QUESTION } from "@/lib/constants";
 import { currentWeight } from "@/lib/derive";
 import { round1, ageFrom, businessDate, daysUntil, toDateTimeLocalValue } from "@/lib/calc";
 
@@ -219,23 +219,16 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
         <p className="kicker">🔒 合言葉（パスワードを忘れたとき用）</p>
         <div className="card">
           <p className="mt0">
-            {user.recoveryQuestion
-              ? <>設定済み：<b>「{user.recoveryQuestion}」</b>（答えは表示されません）</>
+            {user.recoveryAnswerHash
+              ? <>設定済み：<b>「{RECOVERY_QUESTION}」</b>（答えは表示されません）</>
               : <b style={{ color: "var(--amber-ink)" }}>まだ未設定です。忘れたときの復旧のため、設定をおすすめします。</b>}
           </p>
-          <p className="info-note mt0">パスワードを忘れたとき、この「質問と答え」で自分で再設定できます（メール不要）。答えは覚えやすく、他人に推測されにくいものにしてください。</p>
+          <p className="info-note mt0">パスワードを忘れたとき、この答えで自分で再設定できます（メール不要）。答えは覚えやすく、他人に推測されにくいものにしてください。</p>
           <form action={setRecoveryAction}>
             <OwnerField id={user.id} />
-            <label className="fl" htmlFor="recoveryQuestion">合言葉の質問</label>
-            <select id="recoveryQuestion" name="recoveryQuestion" defaultValue={user.recoveryQuestion ?? ""} required>
-              <option value="" disabled>選んでください</option>
-              {RECOVERY_QUESTIONS.map((q) => <option key={q} value={q}>{q}</option>)}
-              {user.recoveryQuestion && !RECOVERY_QUESTIONS.includes(user.recoveryQuestion) && (
-                <option value={user.recoveryQuestion}>{user.recoveryQuestion}</option>
-              )}
-            </select>
-            <label className="fl" htmlFor="recoveryAnswer">答え</label>
-            <input id="recoveryAnswer" name="recoveryAnswer" type="text" autoComplete="off" required placeholder="例：柔道" />
+            <input type="hidden" name="recoveryQuestion" value={RECOVERY_QUESTION} />
+            <label className="fl" htmlFor="recoveryAnswer">合言葉：{RECOVERY_QUESTION}</label>
+            <input id="recoveryAnswer" name="recoveryAnswer" type="text" autoComplete="off" required placeholder="例：ポチ" />
             <p className="info-note mt0">大文字・小文字・前後の空白は無視して照合します。</p>
             <div style={{ height: 8 }} />
             <SubmitButton className="btn btn-primary btn-sm" pendingLabel="保存しています…" style={{ width: "100%" }}>
