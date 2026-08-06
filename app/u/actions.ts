@@ -110,6 +110,7 @@ export async function saveMorningAction(formData: FormData): Promise<void> {
     id: existing?.id ?? uid(), gymId: u.gymId, userId: u.id, date,
     weight: enteredWeight,
     sleepQuality: (str(formData, "sleep") || undefined) as DailyCheckin["sleepQuality"],
+    morningRecovery: (str(formData, "recovery") || undefined) as DailyCheckin["morningRecovery"],
     fatigueLevel: (str(formData, "fatigue") || undefined) as DailyCheckin["fatigueLevel"],
     sluggishnessLevel: (str(formData, "sluggish") || undefined) as DailyCheckin["sluggishnessLevel"],
     painLevel: (str(formData, "pain") || "none") as DailyCheckin["painLevel"],

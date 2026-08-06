@@ -106,6 +106,7 @@ export interface DailyCheckin {
   sleepQuality?: SleepQ;
   fatigueLevel?: Level3;      // 疲労感
   sluggishnessLevel?: Sluggish; // だるさ（別項目で保存 §14）
+  morningRecovery?: "much" | "some" | "same" | "worse"; // 今朝の回復（昨夜→起床時。1日1回・朝チェックで記録）
   motivationLevel?: Motivation; // やる気（現在UIでは未使用）
   painLevel?: PainLevelWord;  // 痛み（詳細は painLogs）
   otherSymptoms?: string[];   // 体のつり・打撲・しびれ 等のチェック

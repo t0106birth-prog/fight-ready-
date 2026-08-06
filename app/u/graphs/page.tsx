@@ -90,7 +90,8 @@ export default async function GraphsPage({ searchParams }: { searchParams: Promi
   const sluggish = days.map((d) => ({ d, level: lv({ none: 0, some: 1, strong: 2 }, byDate.get(d)?.sluggishnessLevel) }));
   const sleep = days.map((d) => ({ d, level: lv({ good: 0, normal: 1, bad: 2 }, byDate.get(d)?.sleepQuality) }));
   const pain = days.map((d) => ({ d, level: painDates.has(d) ? 2 : byDate.has(d) ? 0 : -1 }));
-  const recovery = days.map((d) => ({ d, level: lv({ much: 0, some: 0, same: 1, worse: 2 }, restByDate.get(d)?.recovery) }));
+  // 回復は「今朝の回復（朝チェック）」を優先。無ければ旧・休養日の回復（後方互換）。
+  const recovery = days.map((d) => ({ d, level: lv({ much: 0, some: 0, same: 1, worse: 2 }, byDate.get(d)?.morningRecovery ?? restByDate.get(d)?.recovery) }));
 
   // 各項目の「最近の状態」を言葉にする（色マスは補助にして、言葉で分かるようにする）
   const state = (cells: { level: number }[], words: [string, string, string]): { text: string; tone: string } => {
@@ -239,7 +240,7 @@ export default async function GraphsPage({ searchParams }: { searchParams: Promi
               <MetricRow label="だるさ" cells={sluggish} state={soften(stSluggish)} />
               <MetricRow label="睡眠" cells={sleep} state={soften(stSleep)} />
               <MetricRow label="痛み" cells={pain} state={stPain} />
-              <MetricRow label="休養後の回復" cells={recovery} state={soften(stRecovery)} />
+              <MetricRow label="今朝の回復" cells={recovery} state={soften(stRecovery)} />
               <DayAxis days={days} />
 
               <p className="info-note">

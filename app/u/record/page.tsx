@@ -35,12 +35,11 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
       href: "/u/record/morning",
       ico: "🌅",
       label: "今日のチェック",
-      desc: waterCut ? "体重・睡眠・疲労・痛み（体重は水抜きにも自動で反映）" : "体重・睡眠・疲労・だるさ・痛み",
+      desc: waterCut ? "体重・睡眠・今朝の回復・疲労・痛み（体重は水抜きにも自動で反映）" : "体重・睡眠・今朝の回復・疲労・だるさ・痛み",
       done: todos.morning,
     },
     { href: "/u/record/activity", ico: "🥊", label: "運動・休養の記録", desc: "練習した日も、しなかった日（休養日）も", done: todos.activity },
     { href: "/u/record/nutrition", ico: "🍽️", label: "食事達成度", desc: "今日の食事目標", done: todos.nutrition },
-    { href: "/u/record/rest", ico: "🌙", label: "夜の回復チェック", desc: "一日の終わりに回復・痛みの変化を確認", done: todos.night },
   ];
 
   return (

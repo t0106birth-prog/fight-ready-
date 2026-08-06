@@ -236,11 +236,10 @@ export function dailyVerdict(db: DB, user: User): Verdict {
     bump("yellow", "7日以上、完全休養日がありません");
   }
 
-  // ── 黄/赤: 休養後の回復状態 ──
-  if (restDays[0]) {
-    if (restDays[0].recovery === "worse") bump("red", "休養後も状態が悪化しています");
-    else if (restDays[0].recovery === "same") bump("yellow", "休養後も状態が改善していません");
-  }
+  // ── 黄/赤: 今朝の回復状態（朝チェック優先・無ければ旧・休養日の回復） ──
+  const latestRecovery = checks[0]?.morningRecovery ?? restDays[0]?.recovery;
+  if (latestRecovery === "worse") bump("red", "起床時に回復できず、だるさが残っています");
+  else if (latestRecovery === "same") bump("yellow", "起床時の回復が進んでいません");
 
   // ── 黄: 一般会員の記録・来館が減っている ──
   if (user.role === "member") {

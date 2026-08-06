@@ -152,14 +152,16 @@ export function statusTiles(db: DB, user: User): Tile[] {
   const latest = checks[0];
   const fatigueTone: Signal = latest?.fatigueLevel === "high" ? "yellow" : "green";
   const rest = db.restDayLogs.filter((r) => r.userId === user.id).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
-  const recoveryTone: Signal = rest?.recovery === "worse" ? "red" : rest?.recovery === "same" ? "yellow" : "green";
+  // 回復は「今朝の回復（朝チェック）」を優先。無ければ旧・休養日の回復（後方互換）。
+  const latestRecovery = latest?.morningRecovery ?? rest?.recovery;
+  const recoveryTone: Signal = latestRecovery === "worse" ? "red" : latestRecovery === "same" ? "yellow" : "green";
   const week = weeklyActivityCount(db, user.id);
   const trainTone: Signal = week >= (user.weeklyPlanCount ?? 3) ? "green" : "yellow";
 
   if (user.role === "pro") {
     tiles.push({ lbl: "WEIGHT", val: wp?.text ?? "—", tone: wp?.level ?? "blue" });
     tiles.push({ lbl: "CONDITION", val: latest?.fatigueLevel === "high" ? "疲労あり" : "良好", tone: fatigueTone });
-    tiles.push({ lbl: "RECOVERY", val: rest?.recovery ? recoveryLabel(rest.recovery) : "—", tone: recoveryTone });
+    tiles.push({ lbl: "RECOVERY", val: latestRecovery ? recoveryLabel(latestRecovery) : "—", tone: recoveryTone });
     tiles.push({ lbl: "TRAINING", val: `今週 ${week}回`, tone: trainTone });
     if (inWaterCutWindow(user)) {
       const wc = activeWaterCut(db, user.id);
@@ -189,7 +191,7 @@ export function statusTiles(db: DB, user: User): Tile[] {
       : { val: "—", tone: "blue" };
     tiles.push({ lbl: "BODY", val: body.val, tone: body.tone });
     tiles.push({ lbl: "TRAINING", val: `今週 ${week}回`, tone: trainTone });
-    tiles.push({ lbl: "RECOVERY", val: rest?.recovery ? recoveryLabel(rest.recovery) : (latest?.fatigueLevel === "high" ? "疲労あり" : "良好"), tone: recoveryTone });
+    tiles.push({ lbl: "RECOVERY", val: latestRecovery ? recoveryLabel(latestRecovery) : (latest?.fatigueLevel === "high" ? "疲労あり" : "良好"), tone: recoveryTone });
     const nut = db.nutritionLogs.filter((n) => n.userId === user.id).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
     tiles.push({ lbl: "NUTRITION", val: nut ? achieveLabel(nut.goalAchieved) : "—", tone: nut?.goalAchieved === "done" ? "green" : "yellow" });
     tiles.push({ lbl: "BODY READY", val: verdict.label, tone: verdict.level });

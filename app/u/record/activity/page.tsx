@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { Hero, UserTabbar } from "@/components/Nav";
 import { TrainingForm } from "@/components/TrainingForm";
+import { AddActivitySession } from "@/components/AddActivitySession";
 import { ActivityEditForm } from "@/components/ActivityEditForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { OwnerField } from "@/components/OwnerField";
@@ -52,13 +53,17 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
                 </div>
               </div>
             ))}
-            <p className="info-note mt0">2部練・3部練もOK。各部練は「編集／削除」できます。下から続けて追加も可能です。</p>
+            <p className="info-note mt0">1部だけでも完了です。2部・3部があれば下の「＋追加」から。各部は「編集／削除」できます。</p>
           </div>
         )}
 
         {editing ? (
           <ActivityEditForm act={editing} ownerId={user.id} />
+        ) : todaysActs.length > 0 ? (
+          // すでに1部以上ある：畳んだ「＋もう1部 追加」ボタンだけ出す（1部で完了できる感を出す）
+          <AddActivitySession ownerId={user.id} isMember={user.role === "member"} nextIndex={todaysActs.length + 1} />
         ) : (
+          // まだ0部：最初の1部（または休養日）をそのまま入力
           <TrainingForm ownerId={user.id} isMember={user.role === "member"} restDefaults={restDefaults} />
         )}
       </div>

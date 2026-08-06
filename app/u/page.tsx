@@ -61,7 +61,6 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
     { key: "morning", label: "今日のチェック", href: "/u/record/morning", done: todos.morning },
     { key: "activity", label: "運動記録", href: "/u/record/activity", done: todos.activity },
     { key: "nutrition", label: "食事達成度", href: "/u/record/nutrition", done: todos.nutrition },
-    { key: "night", label: "夜の回復チェック", href: "/u/record/rest", done: todos.night },
   ] : [
     { key: "check", label: "今日のチェック", href: "/u/record/morning", done: todos.morning },
   ];

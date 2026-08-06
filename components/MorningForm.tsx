@@ -60,6 +60,14 @@ export function MorningForm({ ownerId, defaultWeight, waterCut, defaults, painDe
         <label><input type="radio" name="sleep" value="bad" defaultChecked={defaults?.sleepQuality === "bad"} />悪い</label>
       </div>
 
+      <label className="fl">今朝の回復（昨夜〜起きたとき）</label>
+      <div className="seg wrap">
+        <label><input type="radio" name="recovery" value="much" defaultChecked={defaults?.morningRecovery === "much"} />かなり回復</label>
+        <label><input type="radio" name="recovery" value="some" defaultChecked={!defaults?.morningRecovery || defaults.morningRecovery === "some"} />少し回復</label>
+        <label><input type="radio" name="recovery" value="same" defaultChecked={defaults?.morningRecovery === "same"} />変わらない</label>
+        <label><input type="radio" name="recovery" value="worse" defaultChecked={defaults?.morningRecovery === "worse"} />だるさが残る</label>
+      </div>
+
       <label className="fl">疲労感（運動・練習による疲れ）</label>
       <div className="seg">
         <label><input type="radio" name="fatigue" value="low" defaultChecked={!defaults?.fatigueLevel || defaults.fatigueLevel === "low"} />少ない</label>
