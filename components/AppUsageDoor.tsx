@@ -28,11 +28,7 @@ export function AppUsageDoor({ accounts }: { accounts: QuickAccount[] }) {
         >▦</span>
         アプリのように使う（おすすめ）
       </p>
-      <div className="card">
-        <p className="small mt0">ホーム画面に追加すると、次からアプリのように全画面で開けます。</p>
-        <p className="small" style={{ marginBottom: 4 }}><b>iPhone</b>（Safari）: 共有ボタン → 「ホーム画面に追加」</p>
-        <p className="small" style={{ marginBottom: 0 }}><b>Android</b>（Chrome）: ⋮メニュー → 「インストール」</p>
-      </div>
+      {/* ホーム画面への追加手順は上部の「📲 ホーム画面に追加する方法」に集約（重複回避） */}
 
       {open && (
         <div className="quick-panel" style={{ marginTop: 8 }}>
