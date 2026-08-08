@@ -4,7 +4,7 @@ import { currentUser, gymMembers } from "@/lib/auth";
 import { getDb } from "@/lib/store";
 import { StaffTabbar, Hero } from "@/components/Nav";
 import { SigBadge } from "@/components/SigBadge";
-import { summarize, gymSummary, priorityScore } from "@/lib/staff";
+import { summarize, gymSummary, priorityScore, cuttingAthletes, cutPhaseLabelOf, recordedToday } from "@/lib/staff";
 import { sportLabel, bodyPartLabel } from "@/lib/constants";
 
 export default async function StaffHome() {
@@ -21,12 +21,43 @@ export default async function StaffHome() {
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score);
 
+  // 減量中の選手（最優先）と、今日の記録状況
+  const cutting = cuttingAthletes(db, members);
+  const recordedCount = members.filter((m) => recordedToday(db, m.id)).length;
+  const notRecorded = members.filter((m) => !recordedToday(db, m.id));
+
   const gym = db.gyms.find((g) => g.id === staff.gymId);
 
   return (
     <>
       <Hero title="ジムスタッフ" sub={gym?.name} backHref="/staff" />
       <div className="shell-wide">
+        {/* 減量中の選手（最優先・最上段）。監督が毎朝ここを見れば、危険な人から把握できる。 */}
+        {cutting.length > 0 && (
+          <>
+            <p className="kicker">🔥 減量中の選手（{cutting.length}名・危険度順）</p>
+            {cutting.map((c) => (
+              <Link key={c.user.id} href={`/staff/user/${c.user.id}`} className="card" style={{ display: "block", color: "var(--ink)", borderColor: c.tone === "red" ? "var(--red)" : c.tone === "yellow" ? "var(--amber)" : "var(--blue)" }}>
+                <div className="row">
+                  <div><b>{c.user.name}</b> <span className="meta">{cutPhaseLabelOf(c.phase)}</span></div>
+                  <span className={`sig sig-${c.tone}`}>−{c.pct}%</span>
+                </div>
+                <p className="meta mt0" style={{ marginBottom: 0 }}>
+                  {c.daysToWeighIn != null && c.daysToWeighIn >= 0 ? `計量まで ${c.daysToWeighIn}日 ・ ` : ""}現在 {c.current}kg → 目標 {c.target}kg{c.remainKg > 0 ? `（あと ${c.remainKg}kg）` : "（到達）"}
+                </p>
+              </Link>
+            ))}
+          </>
+        )}
+
+        {/* 今日の記録状況（記録率＝チームの継続を一目で） */}
+        <div className="card tight" style={{ marginTop: cutting.length > 0 ? 12 : 0 }}>
+          <div className="row"><b>今日の記録</b><b style={{ color: recordedCount === members.length ? "var(--green-bright)" : "var(--ink)" }}>{recordedCount}/{members.length} 人</b></div>
+          {notRecorded.length > 0
+            ? <p className="meta mt0" style={{ marginBottom: 0 }}>未記録：{notRecorded.slice(0, 8).map((u) => u.name).join("・")}{notRecorded.length > 8 ? ` ほか${notRecorded.length - 8}名` : ""}</p>
+            : members.length > 0 && <p className="meta mt0" style={{ marginBottom: 0 }}>全員が今日の記録を済ませています 👍</p>}
+        </div>
+
         {/* 上部サマリー */}
         <div className="grid3">
           <Stat n={gs.pros} l="選手" />

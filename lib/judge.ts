@@ -222,16 +222,20 @@ export function dailyVerdict(db: DB, user: User): Verdict {
     bump("red", "強いだるさと疲労が同時に記録されています");
   }
 
-  // ── 赤: 急激な体重減少（直近2日で目標に対し速すぎ、または前日比大） ──
+  // ── 赤/黄: 短期間の急な体重減少。ただし①体重比(%)で見る（体格に依存しない）②水抜き中は
+  //    専用の安全判定(acuteLossBand)に任せてここでは出さない（二重警告を避ける）③記録が3日以上
+  //    空いていたら"日々の急減"とはみなさない（水分・食事による自然変動の誤検知を防ぐ）。 ──
+  const inCut = db.waterCutPeriods.some((p) => p.userId === user.id && p.status !== "done");
   const weights = db.dailyCheckins
     .filter((c) => c.userId === user.id && c.weight != null)
     .sort(byDateDesc);
-  if (weights.length >= 2) {
-    const drop = (weights[1].weight as number) - (weights[0].weight as number);
-    const days = Math.max(1, daysBetween(weights[1].date, weights[0].date));
-    const perDay = drop / days;
-    if (perDay >= 1.2) bump("red", "急激な体重減少が確認されています");
-    else if (perDay >= 0.6) bump("yellow", "体重減少が予定より速い可能性があります");
+  if (!inCut && weights.length >= 2) {
+    const gap = Math.max(1, daysBetween(weights[1].date, weights[0].date));
+    if (gap <= 3) {
+      const pctPerDay = (((weights[1].weight as number) - (weights[0].weight as number)) / (weights[1].weight as number)) * 100 / gap;
+      if (pctPerDay >= 2.5) bump("red", "短期間で体重が大きく減っています。体調と水分を確認してください");
+      else if (pctPerDay >= 1.5) bump("yellow", "体重の減りがやや速めです");
+    }
   }
 
   // ── 黄: 疲労・だるさ・睡眠が2日以上続く ──

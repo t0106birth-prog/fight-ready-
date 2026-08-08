@@ -1,8 +1,51 @@
 /** スタッフ画面用の集計(§39-41)。 */
 import type { DB, User } from "./types";
-import { addDays, daysBetween, todayStr, round1, daysUntil } from "./calc";
+import { addDays, daysBetween, todayStr, round1, daysUntil, businessDate } from "./calc";
 import { dailyVerdict, acuteLoss, type Signal } from "./judge";
-import { currentWeight, inWaterCutWindow, activeWaterCut, latestWaterCutLog } from "./derive";
+import { currentWeight, inWaterCutWindow, activeWaterCut, latestWaterCutLog, waterCutPhase, type WaterCutPhase } from "./derive";
+
+/**
+ * 減量中（水抜き期間が進行中）の選手の要約。監督/コーチが最優先で見る主役。
+ * 減少率が高い順（危険な人ほど上）に並べて返す。
+ */
+export interface CutBrief {
+  user: User;
+  phase: WaterCutPhase;
+  pct: number;         // 開始（水抜き開始優先）からの減少率
+  current: number;
+  target: number;
+  remainKg: number;    // あと何kg（正=まだ落とす）
+  daysToWeighIn: number | null;
+  tone: Signal;        // pct>=5 red / >=2 yellow / else blue
+}
+const cutPhaseLabel: Record<string, string> = { loading: "ローディング中", cut: "水抜き中", weighin: "計量中", recovery: "計量後", done: "" };
+export function cutPhaseLabelOf(p: WaterCutPhase): string { return cutPhaseLabel[p] ?? ""; }
+
+export function cuttingAthletes(db: DB, members: User[]): CutBrief[] {
+  const out: CutBrief[] = [];
+  for (const u of members) {
+    if (u.role !== "pro") continue;
+    const period = activeWaterCut(db, u.id);
+    if (!period) continue;
+    const phase = waterCutPhase(period);
+    const effBase = period.cutBaselineWeight ?? period.baselineWeight;
+    const log = latestWaterCutLog(db, u.id, period.id);
+    const current = period.status === "recovery" && period.actualWeighInWeight != null
+      ? period.actualWeighInWeight
+      : log?.currentWeight ?? effBase;
+    const pct = acuteLoss(effBase, current).pct;
+    const remainKg = round1(current - period.targetWeight);
+    const tone: Signal = pct >= 5 ? "red" : pct >= 2 ? "yellow" : "blue";
+    out.push({ user: u, phase, pct, current: round1(current), target: period.targetWeight, remainKg, daysToWeighIn: daysUntil(businessDate(new Date(period.weighInDatetime))), tone });
+  }
+  return out.sort((a, b) => b.pct - a.pct);
+}
+
+/** その日に「今日のチェック」を記録済みか（記録率の集計用）。 */
+export function recordedToday(db: DB, userId: string): boolean {
+  const t = todayStr();
+  return db.dailyCheckins.some((c) => c.userId === userId && c.date === t);
+}
 
 export interface MemberSummary {
   user: User;
