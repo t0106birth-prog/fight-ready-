@@ -4,7 +4,7 @@ import { currentUser } from "@/lib/auth";
 import { getDb } from "@/lib/store";
 import { Hero, UserTabbar } from "@/components/Nav";
 import { LineChart, MetricRow, DayAxis, LoadBars, type CMarker } from "@/components/Chart";
-import { weightProgress, acuteLoss, cutLoad } from "@/lib/judge";
+import { weightProgress, acuteLoss, cutLoad, runningLoad } from "@/lib/judge";
 import { activeWaterCut, latestWaterCutLog, periodSummary } from "@/lib/derive";
 import { addDays, businessDate, round1, daysUntil, todayStr, fmtDate } from "@/lib/calc";
 
@@ -136,7 +136,8 @@ export default async function GraphsPage({ searchParams }: { searchParams: Promi
     loadByDate[a.date] = (loadByDate[a.date] ?? 0) + (a.load ?? a.durationMinutes * (a.rpe ?? 5));
   });
   db.runningLogs.filter((r) => r.userId === user.id).forEach((r) => {
-    loadByDate[r.date] = (loadByDate[r.date] ?? 0) + r.durationMinutes * 5;
+    // ランニングは強度別に重み付け（軽いジョグと高強度インターバルを区別・毎日走る負荷の地味な蓄積を実態に合わせる）
+    loadByDate[r.date] = (loadByDate[r.date] ?? 0) + runningLoad(r.category, r.durationMinutes, r.legCondition);
   });
   const loads = days.map((d) => ({ d, load: loadByDate[d] ?? 0 }));
   const activeLoads = loads.filter((l) => l.load > 0);

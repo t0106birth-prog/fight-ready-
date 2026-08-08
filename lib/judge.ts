@@ -90,6 +90,22 @@ export function waterCutTable(baseline: number) {
 }
 
 /**
+ * ランニングの運動負荷（強度別）。時間×強度係数。カテゴリで強度を推定し、脚の状態で微調整。
+ * 固定×5をやめ、軽いジョグ（×3）と高強度（インターバル/ダッシュ ×8）を区別する。
+ * ・easy: ジョギング/ロードワーク/トレッドミル → ×3
+ * ・hard: インターバル走/ダッシュ/坂道ダッシュ → ×8
+ * ・それ以外（一定ペース/テンポ 等）→ ×5
+ * ・脚が「重い/痛み」→ ×1.2（負担が高い日）
+ */
+export function runningLoad(category: string | undefined, durationMinutes: number, legCondition?: string): number {
+  const hard = ["インターバル走", "ダッシュ", "坂道ダッシュ"];
+  const easy = ["ジョギング", "ロードワーク", "トレッドミル"];
+  const base = category && hard.includes(category) ? 8 : category && easy.includes(category) ? 3 : 5;
+  const legMul = legCondition === "heavy" || legCondition === "pain" ? 1.2 : 1;
+  return durationMinutes * base * legMul;
+}
+
+/**
  * 減量負荷の判定（§計量まで）。「残り%（現在体重比）」と「計量までの日数」から必要ペースを出す。
  * 選手ごとの安全ラインは断定せず、一般的なペース基準で 低/中/高 を返す（過去実績はUI側で併記）。
  * ・週あたり必要減少 ≤1% → 低、〜3% → 中、>3% → 高
