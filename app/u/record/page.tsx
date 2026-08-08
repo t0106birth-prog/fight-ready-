@@ -85,7 +85,7 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
             </Link>
             {it.href === "/u/record/activity" && (
               <Link href="/u/record/running" className="btn btn-ghost" style={{ margin: "-2px 0 8px" }}>
-                🏃 ランニングの詳細を記録
+                🏃 ランニングの詳細を記録{todos.running && <span style={{ color: "var(--green-bright)", fontWeight: 700 }}> ・✓ 記録済み</span>}
               </Link>
             )}
           </Fragment>
@@ -109,7 +109,7 @@ export default async function RecordHub({ searchParams }: { searchParams: Promis
         <p className="kicker">もっと記録する（任意）</p>
         <p className="meta mt0">くわしく残したいときだけ。ここは入力しなくても今日の記録は完了です。</p>
         <Link href="/u/record/activity" className="btn btn-ghost">🥊 運動の詳細（種目・時間・きつさ）</Link>
-        <Link href="/u/record/running" className="btn btn-ghost">🏃 ランニングの詳細</Link>
+        <Link href="/u/record/running" className="btn btn-ghost">🏃 ランニングの詳細{todos.running && <span style={{ color: "var(--green-bright)", fontWeight: 700 }}> ・✓ 記録済み</span>}</Link>
         <Link href="/u/record/nutrition" className="btn btn-ghost">🍽️ 食事の内容をくわしく</Link>
         <Link href="/u/record/rest" className="btn btn-ghost">🌙 夜の回復メモ</Link>
         </>
