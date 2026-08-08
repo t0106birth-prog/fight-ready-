@@ -89,6 +89,29 @@ export function waterCutTable(baseline: number) {
   });
 }
 
+/**
+ * 減量負荷の判定（§計量まで）。「残り%（現在体重比）」と「計量までの日数」から必要ペースを出す。
+ * 選手ごとの安全ラインは断定せず、一般的なペース基準で 低/中/高 を返す（過去実績はUI側で併記）。
+ * ・週あたり必要減少 ≤1% → 低、〜3% → 中、>3% → 高
+ * ・残り5%以上 × 計量まで5日以内 は無条件で高（大きな水抜きが必要＝危険域。全員共通の安全床）。
+ */
+export interface CutLoad { level: "low" | "mid" | "high"; label: string; tone: Signal; weeklyPct: number | null; note: string; }
+export function cutLoad(remainingPct: number, daysLeft: number | null): CutLoad {
+  const weeks = daysLeft != null && daysLeft > 0 ? daysLeft / 7 : null;
+  const weekly = weeks ? round1(remainingPct / weeks) : null;
+  const acuteDanger = remainingPct >= 5 && daysLeft != null && daysLeft <= 5;
+  let level: CutLoad["level"];
+  if (acuteDanger || (weekly != null && weekly > 3)) level = "high";
+  else if (weekly != null ? weekly > 1 : remainingPct > 3) level = "mid";
+  else level = "low";
+  const map = {
+    low: { label: "低", tone: "green" as Signal, note: "無理のない範囲です。体調を見ながら進めましょう。" },
+    mid: { label: "中", tone: "yellow" as Signal, note: "やや負荷が高めです。睡眠・食事・体調を整えて進めましょう。" },
+    high: { label: "高", tone: "red" as Signal, note: "このペースは体への負荷が大きい状態です。体調を最優先に、必要なら専門家へ相談してください。" },
+  };
+  return { level, ...map[level], weeklyPct: weekly };
+}
+
 /* ───────── HYDRO 尿比重(§27) ───────── */
 
 export function hydroBand(usg?: number | null): Band | null {
