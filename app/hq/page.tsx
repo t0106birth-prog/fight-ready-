@@ -5,6 +5,7 @@ import { sportLabel } from "@/lib/constants";
 import { dailyVerdict } from "@/lib/judge";
 import { fmtDateTime } from "@/lib/calc";
 import { SigBadge } from "@/components/SigBadge";
+import { FoldList } from "@/components/FoldList";
 import { hqVerifyAction, hqLogoutAction, hqResetPasswordAction, hqToggleGymAction, hqDeleteGymAction, hqGrantCoachAction } from "./actions";
 import { SubmitButton } from "@/components/SubmitButton";
 
@@ -124,15 +125,17 @@ export default async function HqPage({ searchParams }: { searchParams: Promise<{
             <div className="card tight"><p className="meta mt0">今、赤・黄判定の利用者はいません。</p></div>
           ) : (
             <div className="card tight">
-              {atRisk.map(({ u, v }) => (
-                <Link key={u.id} href={`/hq/user/${u.id}`} className="progress-row" style={{ textDecoration: "none", color: "var(--ink)", alignItems: "flex-start" }}>
-                  <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <SigBadge level={v.level} />
-                    <span>{u.name}<span className="meta"> ・{gymName(u.gymId)}</span><br /><span className="meta" style={{ fontSize: 12 }}>{v.reasons.slice(0, 2).join(" / ")}</span></span>
-                  </span>
-                  <span className="meta">›</span>
-                </Link>
-              ))}
+              <FoldList moreLabel={(n) => `ほかにも ${n} 人を表示`}>
+                {atRisk.map(({ u, v }) => (
+                  <Link key={u.id} href={`/hq/user/${u.id}`} className="progress-row" style={{ textDecoration: "none", color: "var(--ink)", alignItems: "flex-start" }}>
+                    <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <SigBadge level={v.level} />
+                      <span>{u.name}<span className="meta"> ・{gymName(u.gymId)}</span><br /><span className="meta" style={{ fontSize: 12 }}>{v.reasons.slice(0, 2).join(" / ")}</span></span>
+                    </span>
+                    <span className="meta">›</span>
+                  </Link>
+                ))}
+              </FoldList>
             </div>
           )}
 
@@ -164,12 +167,14 @@ export default async function HqPage({ searchParams }: { searchParams: Promise<{
                     )}
                   </span>
                 </div>
-                {athletes.map((u) => (
-                  <Link key={u.id} href={`/hq/user/${u.id}`} className="progress-row" style={{ textDecoration: "none", color: "var(--ink)", borderTop: "1px solid var(--line)" }}>
-                    <span>{u.role === "pro" ? "🥊" : "💪"} {u.name}<span className="meta"> ・{sportLabel(u.primarySport)}</span></span>
-                    <span className="meta">›</span>
-                  </Link>
-                ))}
+                <FoldList moreLabel={(n) => `ほかにも ${n} 人を表示`}>
+                  {athletes.map((u) => (
+                    <Link key={u.id} href={`/hq/user/${u.id}`} className="progress-row" style={{ textDecoration: "none", color: "var(--ink)", borderTop: "1px solid var(--line)" }}>
+                      <span>{u.role === "pro" ? "🥊" : "💪"} {u.name}<span className="meta"> ・{sportLabel(u.primarySport)}</span></span>
+                      <span className="meta">›</span>
+                    </Link>
+                  ))}
+                </FoldList>
                 {athletes.length === 0 && <p className="meta mt0">利用者はまだいません</p>}
               </div>
             );
@@ -181,12 +186,14 @@ export default async function HqPage({ searchParams }: { searchParams: Promise<{
               <p className="kicker">無所属（未紐付け）</p>
               <div className="card">
                 <p className="meta mt0">{unaffiliated.length}名 — タップして詳細から「ジムに紐付け」できます。</p>
-                {unaffiliated.map((u) => (
-                  <Link key={u.id} href={`/hq/user/${u.id}`} className="progress-row" style={{ textDecoration: "none", color: "var(--ink)", borderTop: "1px solid var(--line)" }}>
-                    <span>{u.role === "pro" ? "🥊" : "💪"} {u.name}<span className="meta"> ・{sportLabel(u.primarySport)}</span></span>
-                    <span className="meta">›</span>
-                  </Link>
-                ))}
+                <FoldList moreLabel={(n) => `ほかにも ${n} 名を表示`}>
+                  {unaffiliated.map((u) => (
+                    <Link key={u.id} href={`/hq/user/${u.id}`} className="progress-row" style={{ textDecoration: "none", color: "var(--ink)", borderTop: "1px solid var(--line)" }}>
+                      <span>{u.role === "pro" ? "🥊" : "💪"} {u.name}<span className="meta"> ・{sportLabel(u.primarySport)}</span></span>
+                      <span className="meta">›</span>
+                    </Link>
+                  ))}
+                </FoldList>
               </div>
             </>
           )}
