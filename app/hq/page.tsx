@@ -29,7 +29,12 @@ export default async function HqPage({ searchParams }: { searchParams: Promise<{
         .filter((x) => x.v.level === "red" || x.v.level === "yellow")
         .sort((a, b) => (a.v.level === "red" ? 0 : 1) - (b.v.level === "red" ? 0 : 1))
     : [];
-  const recentLogins = db ? [...db.logins].slice(-15).reverse() : [];
+  // 「最近ログインした利用者」＝利用者ごとに最新1件にまとめる（同じ人の連続ログインで埋まらない＝誰が入ったか一目）
+  const usersByEmail = new Map((db?.users ?? []).map((u) => [u.email, u] as const));
+  const lastLoginByEmail = new Map<string, { email: string; at: string; result: string }>();
+  for (const l of db?.logins ?? []) lastLoginByEmail.set(l.email, { email: l.email, at: l.createdAt, result: l.result });
+  const recentLogins = [...lastLoginByEmail.values()].sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 20);
+  const roleJa = (r?: string) => (r === "pro" ? "選手" : r === "member" ? "一般会員" : r === "staff" ? "スタッフ" : "—");
   // どのジムにも属していない選手/会員（登録時に「なし」を選んだ人）
   const unaffiliated = activeUsers.filter((u) => (u.role === "pro" || u.role === "member") && !gyms.some((g) => g.id === u.gymId));
   // 停止中の選手/会員（active一覧から外れるので、再開できるよう別枠で出す）
@@ -157,18 +162,39 @@ export default async function HqPage({ searchParams }: { searchParams: Promise<{
             </>
           )}
 
-          {/* ログイン履歴（全ジム横断・直近15件） */}
-          <p className="kicker">ログイン履歴（全体）</p>
+          {/* 最近ログインした利用者（全ジム横断・利用者ごとに最新1件）。3件だけ表示し、残りは折りたたむ。 */}
+          <p className="kicker">最近ログインした利用者</p>
           <div className="card tight">
             {recentLogins.length === 0 && <p className="meta mt0">記録なし</p>}
-            {recentLogins.map((l) => (
-              <div className="progress-row" key={l.id} style={{ fontSize: 13 }}>
-                <span>{l.email}<span className="meta"> ・{gymName(l.gymId ?? "")}</span></span>
-                <span className={l.result === "success" ? "" : "field-error"} style={{ fontSize: 12 }}>
-                  {l.result === "success" ? "成功" : "失敗"} / {fmtDateTime(l.createdAt)}
-                </span>
-              </div>
-            ))}
+            {recentLogins.slice(0, 3).map((l) => {
+              const u = usersByEmail.get(l.email);
+              return (
+                <div className="progress-row" key={l.email} style={{ fontSize: 13 }}>
+                  <span>{u?.name ?? l.email}<span className="meta"> ・{roleJa(u?.role)}{u ? ` ・${gymName(u.gymId)}` : ""}</span></span>
+                  <span className={l.result === "success" ? "" : "field-error"} style={{ fontSize: 12 }}>
+                    {l.result === "success" ? "成功" : "失敗"} / {fmtDateTime(l.at)}
+                  </span>
+                </div>
+              );
+            })}
+            {recentLogins.length > 3 && (
+              <details style={{ marginTop: 4 }}>
+                <summary className="meta" style={{ cursor: "pointer" }}>ほかにも {recentLogins.length - 3} 人を表示</summary>
+                <div style={{ marginTop: 4 }}>
+                  {recentLogins.slice(3).map((l) => {
+                    const u = usersByEmail.get(l.email);
+                    return (
+                      <div className="progress-row" key={l.email} style={{ fontSize: 13 }}>
+                        <span>{u?.name ?? l.email}<span className="meta"> ・{roleJa(u?.role)}{u ? ` ・${gymName(u.gymId)}` : ""}</span></span>
+                        <span className={l.result === "success" ? "" : "field-error"} style={{ fontSize: 12 }}>
+                          {l.result === "success" ? "成功" : "失敗"} / {fmtDateTime(l.at)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </details>
+            )}
           </div>
 
           {/* パスワード再設定（スタッフ含む誰でも。メール不要） */}
