@@ -87,8 +87,19 @@ export const RED_SYMPTOMS: string[] = [
   "歩行が難しいほどの脱力", "排尿がほとんどない", "強い動悸", "強い筋けいれん", "急激な体調悪化",
 ];
 
-/** パスワード再設定用「合言葉」の質問（固定）。メール不要のセルフ復旧に使う。 */
-export const RECOVERY_QUESTION = "ペットの名前は？";
+/** パスワード再設定用「合言葉」の質問（本人がいくつかから選ぶ）。メール不要のセルフ復旧に使う。 */
+export const RECOVERY_QUESTIONS = [
+  "ペットの名前は？",
+  "出身の小学校の名前は？",
+  "母親の旧姓は？",
+  "子どもの頃のあだ名は？",
+  "生まれた市区町村は？",
+  "初めて行った旅行先は？",
+  "好きな食べ物は？",
+] as const;
+
+/** 既定の質問（未選択時・旧データ互換）。 */
+export const RECOVERY_QUESTION = RECOVERY_QUESTIONS[0];
 
 /** 合言葉の答えの正規化（前後空白を除き小文字化。全角空白も対象）。 */
 export function normalizeRecoveryAnswer(s: string): string {
