@@ -4,9 +4,9 @@ import { currentUser } from "@/lib/auth";
 import { getDb } from "@/lib/store";
 import { Hero, UserTabbar } from "@/components/Nav";
 import { LineChart, MetricRow, DayAxis, LoadBars, type CMarker } from "@/components/Chart";
-import { weightProgress, acuteLoss } from "@/lib/judge";
-import { activeWaterCut, latestWaterCutLog } from "@/lib/derive";
-import { addDays, businessDate, round1, daysUntil, todayStr } from "@/lib/calc";
+import { weightProgress, acuteLoss, cutLoad } from "@/lib/judge";
+import { activeWaterCut, latestWaterCutLog, periodSummary } from "@/lib/derive";
+import { addDays, businessDate, round1, daysUntil, todayStr, fmtDate } from "@/lib/calc";
 
 const lv = (m: Record<string, number>, v?: string) => (v && v in m ? m[v] : -1);
 
@@ -47,9 +47,9 @@ export default async function GraphsPage({ searchParams }: { searchParams: Promi
   // プロは計量日だけを目印にする（試合日は出さない。当日計量/前日計量の違いは計量日時で吸収）
   const markers: CMarker[] = [];
   if (isPro) {
-    if (user.weighInAt) markers.push({ d: businessDate(new Date(user.weighInAt)), label: "計量", color: "#ff5348" });
+    if (user.weighInAt) { const wd = businessDate(new Date(user.weighInAt)); markers.push({ d: wd, label: `計量 ${fmtDate(wd)}`, color: "#ff5348" }); }
   } else if (user.targetDate) {
-    markers.push({ d: user.targetDate, label: "目標日", color: "#93a1b5" });
+    markers.push({ d: user.targetDate, label: `目標日 ${fmtDate(user.targetDate)}`, color: "#93a1b5" });
   }
   if (wc) markers.push({ d: businessDate(new Date(wc.startDatetime)), label: "水抜き開始", color: "#3d8bf0" });
   const loadingBand = wc ? {
@@ -76,6 +76,15 @@ export default async function GraphsPage({ searchParams }: { searchParams: Promi
   // プロのカウントダウンは「計量日」ベースのみ（計量日未設定なら出さない＝目標日を"計量"と誤ラベルしない）
   const cdDate = user.weighInAt ? businessDate(new Date(user.weighInAt)) : undefined;
   const cdDays = daysUntil(cdDate);
+
+  // 「計量まで あと◯kg（現在体重の◯%）」＋減量負荷。減量ゴールで、まだ目標より重いときだけ。
+  const remainKg = cw != null && effectiveTarget != null && cw > effectiveTarget ? round1(cw - effectiveTarget) : null;
+  const remainPct = cw != null && effectiveTarget != null && cw > effectiveTarget ? round1(((cw - effectiveTarget) / cw) * 100) : null;
+  // その選手の過去最大減量%（完了した水抜きから）。断定せず併記して本人・コーチが解釈する材料に。
+  const pastPcts = db.waterCutPeriods.filter((p) => p.userId === user.id && p.status === "done").map((p) => periodSummary(db, p).maxLossPct);
+  const pastMaxPct = pastPcts.length ? Math.max(...pastPcts) : null;
+  // 減量負荷はプロ（計量日ベース）のみ。一般会員は「あと◯kg（現在の◯%）」だけ。
+  const load = isPro && remainPct != null ? cutLoad(remainPct, cdDays) : null;
 
   // 疲労・回復グラフ（直近14日）
   const days: string[] = [];
@@ -146,14 +155,34 @@ export default async function GraphsPage({ searchParams }: { searchParams: Promi
         {view === "weight" && (
           <>
             <p className="kicker">体重</p>
+
+            {/* 計量まで あと◯kg（現在体重の◯%）＋減量負荷（プロのみ）。減量ゴールで目標より重いとき大きく出す。 */}
+            {remainKg != null ? (
+              <div className="card" style={{ textAlign: "center", borderColor: load ? (load.tone === "red" ? "var(--red)" : load.tone === "yellow" ? "var(--amber)" : "var(--green)") : "var(--amber)" }}>
+                <div className="meta">{isPro && cdDate ? `計量（${fmtDate(cdDate)}）まで` : "目標まで"}</div>
+                <div style={{ fontSize: 36, fontWeight: 800, fontStyle: "italic", lineHeight: 1.1 }}>あと {remainKg}<span style={{ fontSize: 17 }}>kg</span></div>
+                <div className="meta">現在体重の {remainPct}%{isPro && cdDays != null && cdDays >= 0 ? ` ・ 計量まで ${cdDays}日` : ""}</div>
+                {load && (
+                  <div style={{ marginTop: 10 }}>
+                    <span className={`sig sig-${load.tone}`} style={{ fontSize: 14 }}>減量負荷：{load.label}</span>
+                    {load.weeklyPct != null && <span className="meta"> ／ 必要ペース 週{load.weeklyPct}%</span>}
+                    {pastMaxPct != null && <span className="meta"> ／ 過去最大 −{pastMaxPct}%</span>}
+                    <p className="info-note" style={{ margin: "6px 0 0" }}>{load.note}</p>
+                  </div>
+                )}
+              </div>
+            ) : goalReached ? (
+              <div className="alert-band alert-green"><b>🎯 目標体重に到達しています</b></div>
+            ) : null}
+
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8 }}>
               <div className="card tight"><span className="meta">現在体重</span><br /><b>{cw != null ? `${round1(cw)}kg` : "未記録"}</b></div>
               {isPro && cdDays != null
                 ? <div className="card tight"><span className="meta">計量まで</span><br /><b>{cdDays}日</b></div>
                 : lost != null && <div className="card tight"><span className="meta">スタートから</span><br /><b>{lost > 0 ? "−" : lost < 0 ? "+" : "±"}{Math.abs(lost)}kg</b></div>}
-              {isPro && wcLossPct != null
-                ? <div className="card tight"><span className="meta">開始から</span><br /><b>{wcLossPct > 0 ? "−" : wcLossPct < 0 ? "+" : "±"}{Math.abs(wcLossPct)}%</b></div>
-                : goalCoherent && goalDistance != null && <div className="card tight"><span className="meta">目標まで</span><br /><b>{goalReached ? "目標到達" : `あと ${goalDistance}kg`}</b></div>}
+              {isPro && wcLossPct != null && (
+                <div className="card tight"><span className="meta">水抜き開始から</span><br /><b>{wcLossPct > 0 ? "−" : wcLossPct < 0 ? "+" : "±"}{Math.abs(wcLossPct)}%</b></div>
+              )}
             </div>
 
             {!goalCoherent && effectiveTarget != null && (
