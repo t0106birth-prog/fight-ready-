@@ -65,14 +65,58 @@ export default async function HqPage({ searchParams }: { searchParams: Promise<{
             <SubmitButton className="btn btn-primary" pendingLabel="付与しています…" style={{ width: "100%" }}>コーチ権限を付与する</SubmitButton>
           </form>
 
-          {/* 全体サマリ */}
-          <p className="kicker">全体</p>
-          <div className="card">
-            <div className="progress-row"><span>ジム</span><b>{gyms.length}</b></div>
-            <div className="progress-row"><span>選手</span><b>{proTotal}</b></div>
-            <div className="progress-row"><span>一般会員</span><b>{memberTotal}</b></div>
-            <div className="progress-row"><span>スタッフ</span><b>{staffTotal}</b></div>
-          </div>
+          {/* 全体サマリ（各項目をタップすると一覧が開く） */}
+          <p className="kicker">全体（タップで一覧）</p>
+
+          <details className="card tight">
+            <summary style={{ cursor: "pointer" }}><b>ジム</b><span className="meta">　{gyms.length}　▾</span></summary>
+            <div style={{ marginTop: 8 }}>
+              {gyms.length === 0 ? <p className="meta mt0">ジムはありません。</p> : gyms.map((g) => {
+                const us = activeUsers.filter((u) => u.gymId === g.id);
+                return (
+                  <div key={g.id} className="progress-row">
+                    <span>{g.name}<span className="meta"> ・{g.code}{g.suspended ? " ・停止中" : ""}</span></span>
+                    <b className="meta">選手{us.filter((u) => u.role === "pro").length}／会員{us.filter((u) => u.role === "member").length}</b>
+                  </div>
+                );
+              })}
+            </div>
+          </details>
+
+          <details className="card tight">
+            <summary style={{ cursor: "pointer" }}><b>選手</b><span className="meta">　{proTotal}　▾</span></summary>
+            <div style={{ marginTop: 8 }}>
+              {proTotal === 0 ? <p className="meta mt0">選手はいません。</p> : activeUsers.filter((u) => u.role === "pro").map((u) => (
+                <Link key={u.id} href={`/hq/user/${u.id}`} className="progress-row" style={{ textDecoration: "none", color: "var(--ink)" }}>
+                  <span>{u.name}<span className="meta"> ・{gymName(u.gymId)}</span></span>
+                  <span className="meta">›</span>
+                </Link>
+              ))}
+            </div>
+          </details>
+
+          <details className="card tight">
+            <summary style={{ cursor: "pointer" }}><b>一般会員</b><span className="meta">　{memberTotal}　▾</span></summary>
+            <div style={{ marginTop: 8 }}>
+              {memberTotal === 0 ? <p className="meta mt0">一般会員はいません。</p> : activeUsers.filter((u) => u.role === "member").map((u) => (
+                <Link key={u.id} href={`/hq/user/${u.id}`} className="progress-row" style={{ textDecoration: "none", color: "var(--ink)" }}>
+                  <span>{u.name}<span className="meta"> ・{gymName(u.gymId)}</span></span>
+                  <span className="meta">›</span>
+                </Link>
+              ))}
+            </div>
+          </details>
+
+          <details className="card tight">
+            <summary style={{ cursor: "pointer" }}><b>スタッフ</b><span className="meta">　{staffTotal}　▾</span></summary>
+            <div style={{ marginTop: 8 }}>
+              {staffTotal === 0 ? <p className="meta mt0">スタッフはいません。</p> : activeUsers.filter((u) => u.role === "staff").map((u) => (
+                <div key={u.id} className="progress-row">
+                  <span>{u.name}<span className="meta"> ・{gymName(u.gymId)}</span></span>
+                </div>
+              ))}
+            </div>
+          </details>
 
           {/* 要注意者（赤/黄）を全ジム横断で */}
           <p className="kicker">要注意者（全ジム）</p>
