@@ -69,7 +69,7 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <Hero title={`${user.name} さん`} sub={isPro ? "ATHLETE" : "MEMBER"} backHref="/u" />
+      <Hero title={`${user.name} さん`} sub={isPro ? "ATHLETE" : "MEMBER"} hideBack />
       <div className="shell">
         {sp.error === "switched" && (
           <div className="alert-band alert-yellow" style={{ margin: "0 0 10px" }}>
@@ -148,7 +148,7 @@ export default async function UserHome({ searchParams }: { searchParams: Promise
                 ))}
               </div>
               <p className="meta" style={{ margin: "8px 0 0" }}>
-                今日 {completedTodos}/{todoList.length} 完了{nextTodo ? " ・ 約20秒" : " ・ おつかれさまでした"}
+                今日 {completedTodos}/{todoList.length} 完了{nextTodo ? " ・ あと少し" : " ・ おつかれさまでした"}
               </p>
             </Link>
           </>

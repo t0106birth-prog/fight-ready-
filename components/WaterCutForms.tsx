@@ -21,6 +21,8 @@ export function StartWaterCutForm({
   const plannedLoss = hasPlan ? Math.max(0, Math.round((baselineNumber - targetNumber) * 10) / 10) : 0;
   const plannedPct = hasPlan ? Math.round((plannedLoss / baselineNumber) * 1000) / 10 : 0;
   const planTone = plannedPct >= 5 ? "red" : plannedPct >= 2 ? "yellow" : "blue";
+  // 水抜きのみ以外（ローディングから始める）は「計量準備開始」。水抜きのみは「水抜き開始」。
+  const startLabel = plan === "cutonly" ? "水抜き開始" : "計量準備開始";
   return (
     <form action={startWaterCutAction} className="card">
       <OwnerField id={ownerId} />
@@ -39,7 +41,7 @@ export function StartWaterCutForm({
         <div className="at">測定条件をそろえてください</div>
         基準体重は、できる限り「起床後・排尿後・飲食前・同じ体重計」で登録してください。これは条件をそろえるための案内であり、水抜き方法の指示ではありません。
       </div>
-      <label className="fl" htmlFor="start">水抜き開始日時</label>
+      <label className="fl" htmlFor="start">{startLabel}日時</label>
       <input id="start" name="start" type="datetime-local" defaultValue={toDateTimeLocal()} required />
       {latestMeasuredWeight != null && (
         <div className="notice">
@@ -49,7 +51,7 @@ export function StartWaterCutForm({
       )}
       <div className="grid2">
         <div>
-          <label className="fl" htmlFor="baseline">水抜き開始体重(kg)</label>
+          <label className="fl" htmlFor="baseline">{startLabel}体重(kg)</label>
           <input id="baseline" name="baseline" type="number" min="20" max="300" step="0.1" inputMode="decimal" value={baseline} onChange={(e) => setBaseline(e.target.value)} required />
         </div>
         <div>
@@ -83,7 +85,7 @@ export function StartWaterCutForm({
         <>
           <label className="fl" htmlFor="loadingTarget">ローディング水分目標（1日・L）<span className="meta"> 任意</span></label>
           <input id="loadingTarget" name="loadingTarget" type="number" min="0" max="20" step="0.5" inputMode="decimal" placeholder="例：7.5" />
-          <p className="info-note mt0">計量前に水を多めに飲む「ウォーターローディング」の1日の目標量。自分で決めてOK（日々の記録で実際の量を入れられます）。空欄でも始められます。</p>
+          <p className="info-note mt0">計量前に水を多めに飲む「ウォーターローディング」の1日の目標量。担当者と確認した目標がある場合のみ入力してください（日々の記録で実際の量を入れられます）。空欄でも始められます。</p>
         </>
       )}
 

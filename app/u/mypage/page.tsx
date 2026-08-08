@@ -80,8 +80,13 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
                   )}
                   {cdDays != null && (
                     <div style={{ marginTop: 6, fontWeight: 800 }}>
-                      {cdLabel}まで{" "}
-                      <span style={{ fontSize: 24, fontStyle: "italic", color: "var(--red-bright)" }}>{cdDays}</span> 日
+                      {cdDays > 0 ? (
+                        <>{cdLabel}まで <span style={{ fontSize: 24, fontStyle: "italic", color: "var(--red-bright)" }}>{cdDays}</span> 日</>
+                      ) : cdDays === 0 ? (
+                        <>{cdLabel}当日</>
+                      ) : (
+                        <>{cdLabel}から <span style={{ fontSize: 20, fontStyle: "italic", color: "var(--muted)" }}>{-cdDays}</span> 日経過</>
+                      )}
                     </div>
                   )}
                   {cdDate && <div className="meta" style={{ marginTop: 2 }}>{cdDate} {isPro ? "計量" : "まで"}</div>}
@@ -167,7 +172,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
                 </div>
                 <label className="fl" htmlFor="contractWeight">契約体重(kg・ONEハイドレーション用)</label>
                 <input id="contractWeight" name="contractWeight" type="number" min="20" max="300" step="0.01" inputMode="decimal" defaultValue={user.contractWeightKg ?? ""} />
-                <label className="check"><input type="checkbox" name="usesHydration" defaultChecked={user.usesHydration !== false} />ハイドレーション（尿比重・HYDRO）検査を使う</label>
+                <label className="check"><input type="checkbox" name="usesHydration" defaultChecked={user.usesHydration === true} />ハイドレーション（尿比重・HYDRO）検査を使う</label>
                 <p className="info-note mt0">アマチュアなど尿比重検査を使わない場合はチェックを外すと、水抜き画面のHYDRO欄が非表示になります（体重モニタリングは使えます）。ONE選択時は自動でONです。</p>
               </div>
             </>

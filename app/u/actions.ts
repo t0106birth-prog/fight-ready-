@@ -663,7 +663,8 @@ export async function switchToProAction(formData: FormData): Promise<void> {
     user.weighInAt = weighInAt;
     user.weighInType = weighInType;
     if (user.promotion == null) user.promotion = "none";
-    if (user.usesHydration == null) user.usesHydration = true;
+    // HYDRO（尿比重）はONE契約のみ既定ON。一般選手は本人がマイページで有効化する。
+    if (user.usesHydration == null) user.usesHydration = user.promotion === "one";
     if (weighInAt) user.targetDate = businessDate(new Date(weighInAt));
   });
   await setSession({ userId: u.id, gymId: u.gymId, role: "pro" });

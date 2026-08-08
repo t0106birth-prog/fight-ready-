@@ -65,7 +65,8 @@ export async function setUserRoleAction(formData: FormData): Promise<void> {
     if (role === "pro") {
       if (!user.primarySport && user.sports?.length) user.primarySport = user.sports[0];
       if (user.promotion == null) user.promotion = "none";
-      if (user.usesHydration == null) user.usesHydration = true;
+      // HYDRO（尿比重）はONE契約のみ既定ON。一般選手は本人がマイページで有効化する。
+      if (user.usesHydration == null) user.usesHydration = user.promotion === "one";
     } else {
       user.weighInAt = undefined;
       user.fightAt = undefined;

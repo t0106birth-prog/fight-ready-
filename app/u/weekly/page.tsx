@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getDb } from "@/lib/store";
 import { Hero, UserTabbar } from "@/components/Nav";
-import { businessDate, weekStart, todayStr, round1, daysUntil, signed } from "@/lib/calc";
+import { businessDate, weekStart, todayStr, round1, daysUntil, signed, weighInDayLabel } from "@/lib/calc";
 import { acuteLoss, weightProgress } from "@/lib/judge";
 import { activeWaterCut, latestWaterCutLog } from "@/lib/derive";
 
@@ -56,7 +56,7 @@ export default async function WeeklyPage() {
     }
   } else {
     const wd = daysUntil(user.weighInAt ? businessDate(new Date(user.weighInAt)) : undefined);
-    if (wd != null) rows.push(["計量までの日数", `${wd}日`]);
+    if (wd != null) rows.push(["計量まで", weighInDayLabel(wd)]);
     const wp = weightProgress(user, db);
     if (wp) rows.push(["予定体重線との差", wp.text]);
     const period = activeWaterCut(db, user.id);

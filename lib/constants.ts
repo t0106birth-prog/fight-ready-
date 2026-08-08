@@ -87,6 +87,39 @@ export const RED_SYMPTOMS: string[] = [
   "歩行が難しいほどの脱力", "排尿がほとんどない", "強い動悸", "強い筋けいれん", "急激な体調悪化",
 ];
 
+/**
+ * 症状の重さの3段階（過小・過大の両方を避ける）。
+ *  - emergency（緊急）：救急要請を検討すべき症状。
+ *  - stop（中止・確認）：ただちに中止して周囲・専門家に確認すべき症状。
+ *  - caution（注意）：軽い症状。ただし水抜き中は無視させず記録・観察を促す。
+ */
+export type SymptomTier = "emergency" | "stop" | "caution";
+
+const SYMPTOM_EMERGENCY = new Set<string>([
+  "失神", "失神またはしそう", "混乱", "意識がぼんやりする",
+  "けいれん", "筋けいれん", "強い筋けいれん", "胸の痛み",
+  "立てない", "強い息苦しさ", "歩行が難しいほどの脱力", "急激な体調悪化",
+]);
+const SYMPTOM_STOP = new Set<string>([
+  "嘔吐", "繰り返す嘔吐", "強い頭痛", "めまい",
+  "強い動悸", "動悸", "息苦しさ", "強い脱力", "排尿がほとんどない",
+]);
+
+/** 単一症状の段階 */
+export function symptomTier(s: string): SymptomTier {
+  if (SYMPTOM_EMERGENCY.has(s)) return "emergency";
+  if (SYMPTOM_STOP.has(s)) return "stop";
+  return "caution";
+}
+
+/** 症状リストのうち最も重い段階（空なら null） */
+export function worstSymptomTier(list: string[]): SymptomTier | null {
+  if (!list || list.length === 0) return null;
+  if (list.some((s) => SYMPTOM_EMERGENCY.has(s))) return "emergency";
+  if (list.some((s) => SYMPTOM_STOP.has(s))) return "stop";
+  return "caution";
+}
+
 /** パスワード再設定用「合言葉」の質問（本人がいくつかから選ぶ）。メール不要のセルフ復旧に使う。 */
 export const RECOVERY_QUESTIONS = [
   "ペットの名前は？",

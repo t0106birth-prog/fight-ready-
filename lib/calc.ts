@@ -83,6 +83,14 @@ export function daysUntil(target?: string): number | null {
   return daysBetween(todayStr(), target.slice(0, 10));
 }
 
+/** 計量までの残り日数を人にやさしいラベルに（過去は「経過」表記にして負数を出さない） */
+export function weighInDayLabel(days: number | null): string {
+  if (days == null) return "—";
+  if (days > 0) return `あと${days}日`;
+  if (days === 0) return "計量当日";
+  return `計量から${-days}日経過`;
+}
+
 /** 残り時間を「◯日◯時間」表記に */
 export function untilLabel(targetIso?: string): string {
   if (!targetIso) return "—";

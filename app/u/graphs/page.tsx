@@ -6,7 +6,7 @@ import { Hero, UserTabbar } from "@/components/Nav";
 import { LineChart, MetricRow, DayAxis, LoadBars, type CMarker } from "@/components/Chart";
 import { weightProgress, acuteLoss, cutLoad, runningLoad } from "@/lib/judge";
 import { activeWaterCut, latestWaterCutLog, periodSummary } from "@/lib/derive";
-import { addDays, businessDate, round1, daysUntil, todayStr, fmtDate } from "@/lib/calc";
+import { addDays, businessDate, round1, daysUntil, todayStr, fmtDate, weighInDayLabel } from "@/lib/calc";
 
 const lv = (m: Record<string, number>, v?: string) => (v && v in m ? m[v] : -1);
 
@@ -179,7 +179,7 @@ export default async function GraphsPage({ searchParams }: { searchParams: Promi
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8 }}>
               <div className="card tight"><span className="meta">現在体重</span><br /><b>{cw != null ? `${round1(cw)}kg` : "未記録"}</b></div>
               {isPro && cdDays != null
-                ? <div className="card tight"><span className="meta">計量まで</span><br /><b>{cdDays}日</b></div>
+                ? <div className="card tight"><span className="meta">計量まで</span><br /><b>{weighInDayLabel(cdDays)}</b></div>
                 : lost != null && <div className="card tight"><span className="meta">スタートから</span><br /><b>{lost > 0 ? "−" : lost < 0 ? "+" : "±"}{Math.abs(lost)}kg</b></div>}
               {isPro && wcLossPct != null && (
                 <div className="card tight"><span className="meta">水抜き開始から</span><br /><b>{wcLossPct > 0 ? "−" : wcLossPct < 0 ? "+" : "±"}{Math.abs(wcLossPct)}%</b></div>

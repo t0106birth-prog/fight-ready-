@@ -8,7 +8,7 @@ import { saveMorningAction } from "@/app/u/actions";
 import { OwnerField } from "@/components/OwnerField";
 import type { DailyCheckin, PainLog } from "@/lib/types";
 import type { WaterCutPhase } from "@/lib/derive";
-import { signed } from "@/lib/calc";
+import { signed, round1 } from "@/lib/calc";
 
 const URINE_HEX: Record<string, string> = { light: "#f4e9a8", normal: "#e6c94a", dark: "#c8931f", very_dark: "#8a5a12" };
 
@@ -51,7 +51,7 @@ export function MorningForm({ ownerId, defaultWeight, waterCut, defaults, painDe
       )}
 
       <label className="fl" htmlFor="weight">今日の体重(kg)</label>
-      <input id="weight" name="weight" type="number" min="20" max="300" step="0.1" inputMode="decimal" defaultValue={defaults?.weight ?? defaultWeight ?? ""} required={Boolean(waterCut)} />
+      <input id="weight" name="weight" type="number" min="20" max="300" step="0.1" inputMode="decimal" defaultValue={defaults?.weight != null ? round1(defaults.weight) : defaultWeight != null ? round1(defaultWeight) : ""} required={Boolean(waterCut)} />
 
       <label className="fl">睡眠の質</label>
       <div className="seg">

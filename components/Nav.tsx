@@ -44,14 +44,14 @@ function Tabbar({ items, active }: { items: { href: string; ico: string; label: 
   );
 }
 
-/** 共通ヘッダー。［← もどる］［ログアウト/ログイン画面］ */
-export async function Hero({ title, sub, backHref }: { title: string; sub?: string; backHref?: string }) {
+/** 共通ヘッダー。［← もどる］［ログアウト/ログイン画面］。hideBack=trueでホーム等の「自分に戻る」を消す */
+export async function Hero({ title, sub, backHref, hideBack }: { title: string; sub?: string; backHref?: string; hideBack?: boolean }) {
   const user = await currentUser();
   const home = user ? homePath(user.role) : "/";
   return (
     <div className="hero">
       <div className="hero-nav">
-        <Link href={backHref ?? home} className="hero-btn">← もどる</Link>
+        {hideBack ? <span /> : <Link href={backHref ?? home} className="hero-btn">← もどる</Link>}
         {user ? (
           <form action={logoutAction}>
             <button type="submit" className="hero-btn">ログアウト</button>

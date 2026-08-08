@@ -15,7 +15,7 @@ import { finishWaterCutAction, startCutPhaseAction, revertToLoadingAction, start
 import { acuteLoss, acuteLossBand, hydroBand, oneHydroBand, oneReadyVerdict, waterCutTable } from "@/lib/judge";
 import { activeWaterCut, currentWeight, latestWaterCutLog, latestHydration, waterCutPhase, periodSummary } from "@/lib/derive";
 import { untilLabel, round1, fmtDateTime, hoursBetweenIso, signed, businessDate } from "@/lib/calc";
-import { EMERGENCY_SYMPTOMS } from "@/lib/constants";
+import { worstSymptomTier, symptomTier, type SymptomTier } from "@/lib/constants";
 import { today } from "@/lib/store";
 
 const bandClass: Record<string, string> = { red: "alert-red", yellow: "alert-yellow", blue: "alert-blue", green: "alert-green" };
@@ -23,7 +23,7 @@ const bandClass: Record<string, string> = { red: "alert-red", yellow: "alert-yel
 const PHASE_GUIDE: Record<string, string> = {
   loading: "水分量・体重・体調の変化を記録し、異常があればスタッフへ伝えてください。",
   cut: "水抜き中です。体重と症状を記録し、体調を最優先にしてください。",
-  weighin: "計量おつかれさま。次はリカバリーです。",
+  weighin: "計量日です。公式計量の結果が出たら、上の「計量時の最終体重」に入力してください。",
   recovery: "計量後の回復を記録すると、この準備を終えられます。",
   done: "",
 };
@@ -34,7 +34,7 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
   if (!user || user.role !== "pro") redirect("/u");
   const db = await getDb();
   const isOne = user.promotion === "one";
-  const showHydro = isOne || user.usesHydration !== false;
+  const showHydro = isOne || user.usesHydration === true;
 
   const period = activeWaterCut(db, user.id);
 
@@ -86,8 +86,24 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
   const hydro = latestHydration(db, user.id, period.id);
   const symptoms = [...new Set([...(todayCheck?.dangerSymptoms ?? []), ...(hydro?.symptoms ?? [])])];
   const hasSymptom = symptoms.length > 0;
-  const hasEmergency = symptoms.some((s) => EMERGENCY_SYMPTOMS.includes(s));
+  const symptomLevel: SymptomTier | null = worstSymptomTier(symptoms);
   const hydrationCaution = todayCheck?.hydrationThirst === "strong" || todayCheck?.urineVolumeStatus === "very_low";
+  // 上部で1枚にまとめる総合安全判定（重複警告をやめる）。症状は率が低くても重症度で判定。
+  const overFive = pct >= 5;
+  const safetyLevel: "red" | "yellow" | "green" =
+    symptomLevel === "emergency" || symptomLevel === "stop" || overFive ? "red"
+      : symptomLevel === "caution" || hydrationCaution ? "yellow"
+        : "green";
+  // 症状を重症度で振り分けて理由に並べる
+  const emergencySymptoms = symptoms.filter((s) => symptomTier(s) === "emergency");
+  const stopSymptoms = symptoms.filter((s) => symptomTier(s) === "stop");
+  const cautionSymptoms = symptoms.filter((s) => symptomTier(s) === "caution");
+  const safetyTitle =
+    symptomLevel === "emergency" ? "🚑 緊急：救急要請を検討してください"
+      : symptomLevel === "stop" ? "⛔ ただちに中止し、周囲・専門家へ確認を"
+        : overFive ? "⚠️ 危険域（開始から5%以上の減少）"
+          : safetyLevel === "yellow" ? "注意：気になるサインがあります"
+            : "現在は気になる警告はありません";
 
   const band = acuteLossBand(pct, hasSymptom);
   const hb = hydroBand(hydro?.urineSpecificGravity);
@@ -182,30 +198,38 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
           </form>
         )}
 
-        {/* 安全アラート（あるときだけ主張する）。症状は減少率が低くても赤。 */}
-        {hasSymptom && (
-          <div className="alert-band alert-red">
-            <div className="at">危険な症状があります</div>
-            減量・水抜きを中止し、周囲の人へ知らせてください。重い症状や意識障害がある場合は、直ちに救急要請を検討してください。（{symptoms.join("・")}）
-            {hasEmergency && <div style={{ marginTop: 6, fontWeight: 800 }}>🚑 緊急性の高い症状です。ためらわず救急要請（119）を検討してください。</div>}
-          </div>
-        )}
-        {/* 5%以上は折りたたみの中だけでなく、常に上部で赤警告する（§5） */}
-        {pct >= 5 && (
-          <div className="alert-band alert-red">
-            <div className="at">5%以上の急性減少です</div>
-            危険域のため、これ以上進める前に専門家へ確認してください。（いま {lossPctLabel}）
-          </div>
-        )}
-        {hydrationCaution && !hasSymptom && (
-          <div className="alert-band alert-yellow">
-            <div className="at">水分状態の気になる変化</div>
-            強い口渇、または尿がほとんど出ない状態です。体重と体調を合わせて確認してください。
-          </div>
-        )}
+        {/* 現在の安全判定（上部に1枚だけ）。個別の根拠は下の「なぜこの判定か」に集約し、重複警告をやめる。 */}
+        <div className={`alert-band ${bandClass[safetyLevel]}`}>
+          <div className="at">現在の安全判定{safetyLevel === "green" ? "" : `：${safetyLevel === "red" ? "危険" : "注意"}`}</div>
+          <b>{safetyTitle}</b>
+          {safetyLevel !== "green" && (
+            <ul style={{ margin: "8px 0 0", paddingLeft: "1.2em" }}>
+              {emergencySymptoms.length > 0 && (
+                <li><b>緊急の症状：</b>{emergencySymptoms.join("・")}（減量・水抜きを中止し、ためらわず救急要請〈119〉を検討）</li>
+              )}
+              {stopSymptoms.length > 0 && (
+                <li><b>中止・確認すべき症状：</b>{stopSymptoms.join("・")}（いったん中止し、周囲・専門家へ確認）</li>
+              )}
+              {cautionSymptoms.length > 0 && (
+                <li><b>気になる症状：</b>{cautionSymptoms.join("・")}（水抜き中は無視せず、記録して様子を見る）</li>
+              )}
+              {overFive && <li><b>減少率が5%以上：</b>いま {lossPctLabel}。これ以上進める前に専門家へ確認してください。</li>}
+              {hydrationCaution && <li><b>水分状態の変化：</b>強い口渇、または尿がほとんど出ない状態です。</li>}
+            </ul>
+          )}
+          {safetyLevel === "green" && <p className="info-note mt0" style={{ marginBottom: 0 }}>このまま記録を続けてください。気になる症状が出たら、すぐに「今日のチェック」で入力を。</p>}
+        </div>
 
         {/* フェーズ別ヒーロー：今の主役の数字だけ大きく */}
-        {phase === "loading" ? (
+        {phase === "weighin" && period.status === "active" ? (
+          /* 計量日：ここでは「あと◯kg」より、公式計量の結果入力を主役にする */
+          <div className="card" style={{ textAlign: "center", borderColor: "var(--blue)" }}>
+            <div className="lbl" style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".06em", color: "var(--muted)" }}>⚖️ 計量日</div>
+            <div style={{ fontSize: 22, fontWeight: 800, fontStyle: "italic", margin: "4px 0" }}>公式計量の結果を入力</div>
+            <div className="meta" style={{ fontSize: 12 }}>直近の記録 {round1(current)}kg ／ 目標 {period.targetWeight}kg</div>
+            <a href="#actualWeighInWeight" className="btn btn-primary btn-sm" style={{ marginTop: 10 }}>計量結果を入力する</a>
+          </div>
+        ) : phase === "loading" ? (
           <div className="card" style={{ textAlign: "center", borderColor: "var(--blue)" }}>
             <div className="lbl" style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".06em", color: "var(--muted)" }}>水分ローディング（今日）</div>
             <div className="big-num" style={{ fontSize: 40, color: "#6bb0ff" }}>{todayWaterL ?? "—"}<span className="unit" style={{ fontSize: 15 }}>L</span></div>
@@ -235,16 +259,9 @@ export default async function WaterCutPage({ searchParams }: { searchParams: Pro
           <div className="alert-band alert-blue"><div className="at">👉 今のフェーズ</div>{PHASE_GUIDE[phase]}</div>
         )}
 
-        {/* 今日のポイント：現在フェーズの安全案内（重要2件＋すべて見る）。赤警告があれば上に出す。 */}
+        {/* 今日のポイント：現在フェーズの案内のみ。危険判定は上の「現在の安全判定」に集約済み。 */}
         {phase !== "done" && (
-          <PhaseSafetyTips
-            phase={phase}
-            redWarning={hasSymptom
-              ? "危険な症状があります。減量・水抜きを中止し、周囲の人へ知らせてください。"
-              : pct >= 5
-                ? "5%以上の急性減少です。これ以上進める前に専門家へ確認してください。"
-                : null}
-          />
+          <PhaseSafetyTips phase={phase} redWarning={null} />
         )}
 
         {/* 今日の記録（体重＋水分量＋電解質） */}
